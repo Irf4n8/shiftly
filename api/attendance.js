@@ -40,8 +40,12 @@ export default async function handler(req, res) {
     }
 
     if (!upstream.ok || data.ok === false) {
+      let errorMessage = data.error || "The attendance service could not complete the request.";
+      if (data.error === "Unauthorized request.") {
+        errorMessage = "Unauthorized request: APPS_SCRIPT_SECRET in Vercel does not match the API_SECRET in Google Apps Script.";
+      }
       return res.status(upstream.ok ? 400 : 502).json({
-        error: data.error || "The attendance service could not complete the request."
+        error: errorMessage
       });
     }
 
