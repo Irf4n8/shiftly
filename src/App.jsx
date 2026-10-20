@@ -3,7 +3,8 @@ import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
   Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
-  BarChart3, Scale, AlertTriangle, ShieldCheck, Compass, Info
+  BarChart3, Scale, AlertTriangle, ShieldCheck, Compass, Info,
+  Bell, BellRing, Smartphone, Check
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -274,6 +275,35 @@ function formatDuration(seconds = 0, alwaysShowSeconds = true) {
   return `${m}m ${String(s).padStart(2, "0")}s`;
 }
 
+function formatCountdown(seconds = 0) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function triggerVibrate(pattern = [200, 100, 200]) {
+  if (typeof window !== "undefined" && "navigator" in window && typeof navigator.vibrate === "function") {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+}
+
+function sendBreakNotification(title, body) {
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(title, {
+        body,
+        icon: "/favicon.png",
+        badge: "/favicon.png",
+        tag: "shiftly-break-alert",
+        vibrate: [200, 100, 200]
+      });
+    } catch (e) {}
+  }
+}
+
 function formatDate(date = new Date()) {
   return date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
@@ -345,11 +375,13 @@ function summarize(events, nowMs = Date.now()) {
   if (status === "WORKING" && workStartedAt !== null) {
     workSeconds += Math.max(0, (nowMs - workStartedAt) / 1000);
   }
+  let currentBreakSeconds = 0;
   if (status === "ON_BREAK" && breakStartedAt !== null) {
-    breakSeconds += Math.max(0, (nowMs - breakStartedAt) / 1000);
+    currentBreakSeconds = Math.max(0, (nowMs - breakStartedAt) / 1000);
+    breakSeconds += currentBreakSeconds;
   }
 
-  return { status, workSeconds, breakSeconds, firstPunch, lastPunch };
+  return { status, workSeconds, breakSeconds, firstPunch, lastPunch, breakStartedAt, currentBreakSeconds };
 }
 
 const RANDOM_DIGITS = "0123456789";
@@ -880,6 +912,93 @@ export default function App() {
     return generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd);
   }, [breakSlotsData, summary, standardEnd, estimatedEnd]);
 
+  // Smart Break Focus Timer state
+  const [customBreakLimit, setCustomBreakLimit] = useState(null);
+  const [breakAlertToast, setBreakAlertToast] = useState(null);
+  const [notifPermission, setNotifPermission] = useState(() => {
+    return typeof window !== "undefined" && "Notification" in window ? Notification.permission : "default";
+  });
+
+  const activeBreakSlot = useMemo(() => {
+    return breakSlotsData.slots.find((s) => s.isActiveNow) || null;
+  }, [breakSlotsData]);
+
+  const activeBreakLimitMinutes = useMemo(() => {
+    if (customBreakLimit) return customBreakLimit;
+    if (activeBreakSlot) return activeBreakSlot.allowedMinutes;
+    const hour = new Date(now).getHours();
+    if (hour >= 13 && hour < 16) return 30; // lunch default
+    return 15; // morning or evening default
+  }, [customBreakLimit, activeBreakSlot, now]);
+
+  const currentBreakElapsedSeconds = Math.max(0, Math.floor(summary.currentBreakSeconds || 0));
+  const targetBreakLimitSeconds = activeBreakLimitMinutes * 60;
+  const currentBreakRemainingSeconds = Math.max(0, targetBreakLimitSeconds - currentBreakElapsedSeconds);
+  const currentBreakOverageSeconds = Math.max(0, currentBreakElapsedSeconds - targetBreakLimitSeconds);
+  const isCurrentBreakOver = currentBreakOverageSeconds > 0;
+  const isCurrentBreakWarning = !isCurrentBreakOver && currentBreakRemainingSeconds <= 120 && currentBreakElapsedSeconds > 0;
+
+  const fired2mAlertRef = useRef(false);
+  const fired0mAlertRef = useRef(false);
+  const lastBreakTimestampRef = useRef(null);
+
+  useEffect(() => {
+    if (summary.status !== "ON_BREAK") {
+      fired2mAlertRef.current = false;
+      fired0mAlertRef.current = false;
+      lastBreakTimestampRef.current = null;
+      setBreakAlertToast(null);
+      return;
+    }
+
+    if (lastBreakTimestampRef.current !== summary.breakStartedAt) {
+      fired2mAlertRef.current = false;
+      fired0mAlertRef.current = false;
+      lastBreakTimestampRef.current = summary.breakStartedAt;
+      setBreakAlertToast(null);
+    }
+
+    // 2-minute alert (remaining <= 120s and > 0)
+    if (currentBreakRemainingSeconds <= 120 && currentBreakRemainingSeconds > 0 && currentBreakElapsedSeconds > 0 && !fired2mAlertRef.current) {
+      fired2mAlertRef.current = true;
+      triggerVibrate([250, 100, 250, 100, 350]);
+      sendBreakNotification(
+        "⏳ Shiftly: 2m Remaining!",
+        `Break ending in 2m (${activeBreakLimitMinutes}m limit). Head back to punch in on time!`
+      );
+      setBreakAlertToast({
+        type: "warning",
+        message: `⏳ Break ending in 2m (${activeBreakLimitMinutes}m limit) — head back to punch in on time!`
+      });
+    }
+
+    // 0-minute alert (when overage begins)
+    if (isCurrentBreakOver && !fired0mAlertRef.current) {
+      fired0mAlertRef.current = true;
+      triggerVibrate([450, 150, 450, 150, 600]);
+      sendBreakNotification(
+        "⚠️ Shiftly: Break Limit Reached!",
+        `Your ${activeBreakLimitMinutes}m break limit is reached! Resume work now to prevent workday extension.`
+      );
+      setBreakAlertToast({
+        type: "danger",
+        message: `⚠️ Your ${activeBreakLimitMinutes}m break limit is reached! Resume work now to prevent workday extension.`
+      });
+    }
+  }, [summary.status, currentBreakRemainingSeconds, currentBreakElapsedSeconds, isCurrentBreakOver, summary.breakStartedAt, activeBreakLimitMinutes]);
+
+  const requestNotificationPermission = useCallback(async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        setNotifPermission(perm);
+        if (perm === "granted") {
+          sendBreakNotification("🔔 Shiftly Alerts Enabled", "You will receive haptic vibration and notifications before break limits.");
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   async function login(event) {
     event.preventDefault();
     setBusy(true);
@@ -932,6 +1051,17 @@ export default function App() {
     setNotice(ACTION_LABELS[action] || "Saved.");
     setIsCustomTimeOpen(false);
     setCustomTime(getLocalTimeString());
+
+    if (action === "START_BREAK") {
+      triggerVibrate([120, 60, 120]);
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then((p) => setNotifPermission(p)).catch(() => {});
+      }
+    } else if (action === "RESUME_WORK") {
+      triggerVibrate([100]);
+      setBreakAlertToast(null);
+      setCustomBreakLimit(null);
+    }
 
     setBusy(true);
     setError("");
@@ -1238,6 +1368,109 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      {/* Smart Break Focus Timer & Countdown Ring */}
+      {summary.status === "ON_BREAK" && (
+        <section className="break-focus-card">
+          <div className="break-focus-header">
+            <div className="break-focus-title">
+              <div className="focus-pulsing-dot" />
+              <div>
+                <span className="focus-eyebrow">ACTIVE BREAK FOCUS TIMER</span>
+                <h3>{activeBreakSlot ? activeBreakSlot.name : "Break in Progress"}</h3>
+              </div>
+            </div>
+            <div className="break-limit-chips">
+              <span className="chip-label">Target:</span>
+              <button
+                type="button"
+                className={`chip-target ${activeBreakLimitMinutes === 15 ? "active" : ""}`}
+                onClick={() => setCustomBreakLimit(15)}
+              >
+                15m Break
+              </button>
+              <button
+                type="button"
+                className={`chip-target ${activeBreakLimitMinutes === 30 ? "active" : ""}`}
+                onClick={() => setCustomBreakLimit(30)}
+              >
+                30m Lunch
+              </button>
+              <button
+                type="button"
+                className={`chip-target ${activeBreakLimitMinutes === 10 ? "active" : ""}`}
+                onClick={() => setCustomBreakLimit(10)}
+              >
+                10m Quick
+              </button>
+            </div>
+          </div>
+
+          {breakAlertToast && (
+            <div className={`break-alert-toast ${breakAlertToast.type}`}>
+              <span>{breakAlertToast.message}</span>
+            </div>
+          )}
+
+          <div className="countdown-ring-container">
+            <div className="countdown-ring-wrapper">
+              <svg className="countdown-ring-svg" viewBox="0 0 160 160">
+                <circle className="countdown-ring-bg" cx="80" cy="80" r="64" />
+                <circle
+                  className={`countdown-ring-fg ${isCurrentBreakOver ? "over" : isCurrentBreakWarning ? "warning" : ""}`}
+                  cx="80"
+                  cy="80"
+                  r="64"
+                  strokeDasharray={402.12}
+                  strokeDashoffset={
+                    isCurrentBreakOver
+                      ? 0
+                      : 402.12 * (1 - Math.max(0, currentBreakRemainingSeconds / targetBreakLimitSeconds))
+                  }
+                />
+              </svg>
+              <div className="countdown-ring-content">
+                <span className={`countdown-time ${isCurrentBreakOver ? "over" : isCurrentBreakWarning ? "warning" : ""}`}>
+                  {isCurrentBreakOver
+                    ? `+${formatCountdown(currentBreakOverageSeconds)}`
+                    : formatCountdown(currentBreakRemainingSeconds)}
+                </span>
+                <span className="countdown-label">
+                  {isCurrentBreakOver ? "OVER LIMIT" : isCurrentBreakWarning ? "ENDING SOON" : "TIME REMAINING"}
+                </span>
+                <span className="countdown-used">
+                  {formatDuration(currentBreakElapsedSeconds, false)} elapsed
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="break-haptic-bar">
+            <div className="haptic-info">
+              {notifPermission === "granted" ? (
+                <span className="haptic-pill active">
+                  <BellRing size={13} />
+                  <span>Vibration & Notifications Ready</span>
+                </span>
+              ) : (
+                <button type="button" className="enable-notif-btn" onClick={requestNotificationPermission}>
+                  <Bell size={13} />
+                  <span>Enable Phone Notifications</span>
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="test-vibrate-btn"
+              onClick={() => triggerVibrate([200, 100, 200, 100, 300])}
+              title="Test phone vibration pattern"
+            >
+              <Smartphone size={13} />
+              <span>Test Vibrate</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="metrics-grid">
         <article className="metric-card">

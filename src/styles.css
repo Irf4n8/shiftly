@@ -770,6 +770,273 @@ h1 span {
   margin: 8px 0 0;
 }
 
+/* =========================================================================
+   Smart Break Focus Timer & Countdown Ring
+   ========================================================================= */
+.break-focus-card {
+  margin-top: 18px;
+  background: var(--surface);
+  border: var(--border-heavy) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  box-shadow: var(--shadow-lg);
+  animation: focusCardIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes focusCardIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.break-focus-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.break-focus-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.focus-pulsing-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid var(--border);
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  animation: pulseDot 1.5s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulseDot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.focus-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  display: block;
+}
+.break-focus-title h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-main);
+}
+
+.break-limit-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.chip-target {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.chip-target:hover {
+  background: var(--surface-highlight);
+  border-color: var(--accent-work);
+}
+.chip-target.active {
+  background: var(--accent-work);
+  color: #ffffff;
+  border-color: var(--border);
+  box-shadow: 2px 2px 0px var(--border);
+}
+
+.break-alert-toast {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0px var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastPop 0.25s ease;
+}
+@keyframes toastPop {
+  0% { transform: scale(0.97); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+.break-alert-toast.warning {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #f59e0b;
+}
+.break-alert-toast.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #ef4444;
+}
+
+.countdown-ring-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 0 16px;
+}
+.countdown-ring-wrapper {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  display: grid;
+  place-items: center;
+}
+.countdown-ring-svg {
+  width: 170px;
+  height: 170px;
+  transform: rotate(-90deg);
+}
+.countdown-ring-bg {
+  fill: none;
+  stroke: var(--surface-muted);
+  stroke-width: 10;
+}
+.countdown-ring-fg {
+  fill: none;
+  stroke: var(--accent-work);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease, stroke 0.3s ease;
+}
+.countdown-ring-fg.warning {
+  stroke: #f59e0b;
+}
+.countdown-ring-fg.over {
+  stroke: #ef4444;
+  animation: ringPulse 1.5s infinite ease-in-out;
+}
+@keyframes ringPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.countdown-ring-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.countdown-time {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--text-main);
+  line-height: 1;
+}
+.countdown-time.warning {
+  color: #d97706;
+}
+.countdown-time.over {
+  color: #dc2626;
+}
+.countdown-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+.countdown-used {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.break-haptic-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1.5px solid var(--border);
+  flex-wrap: wrap;
+}
+.haptic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #15803d;
+}
+.enable-notif-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.enable-notif-btn:hover {
+  background: #dbeafe;
+}
+.test-vibrate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 10px;
+  background: var(--surface-muted);
+  color: var(--text-main);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.test-vibrate-btn:hover {
+  background: var(--surface-highlight);
+  box-shadow: 2px 2px 0px var(--border);
+}
+.test-vibrate-btn:active {
+  transform: translate(1px, 1px);
+}
+
 /* Break Schedule & 3-Window Policy Cards */
 .break-schedule-card {
   display: flex;
@@ -2366,6 +2633,65 @@ h2 {
   background: #0c2838;
   color: #38bdf8;
   border-color: #075985;
+}
+
+/* Smart Break Focus Timer Dark Theme */
+[data-theme="dark"] .break-focus-card {
+  background: #0f172a;
+  border-color: #28354c;
+  box-shadow: 4px 4px 0px #02040a;
+}
+[data-theme="dark"] .countdown-ring-bg {
+  stroke: #1e293b;
+}
+[data-theme="dark"] .countdown-ring-fg {
+  stroke: #38bdf8;
+}
+[data-theme="dark"] .countdown-ring-fg.warning {
+  stroke: #fbbf24;
+}
+[data-theme="dark"] .countdown-ring-fg.over {
+  stroke: #f87171;
+}
+[data-theme="dark"] .countdown-time.warning {
+  color: #fde047;
+}
+[data-theme="dark"] .countdown-time.over {
+  color: #f87171;
+}
+[data-theme="dark"] .break-alert-toast.warning {
+  background: #2b1f06;
+  border-color: #f59e0b;
+  color: #fde047;
+}
+[data-theme="dark"] .break-alert-toast.danger {
+  background: #2b1115;
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+[data-theme="dark"] .chip-target {
+  background: #162032;
+  border-color: #28354c;
+  color: #cbd5e1;
+}
+[data-theme="dark"] .chip-target.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #60a5fa;
+  box-shadow: 2px 2px 0px #02040a;
+}
+[data-theme="dark"] .enable-notif-btn {
+  background: #162032;
+  color: #38bdf8;
+  border-color: #28354c;
+}
+[data-theme="dark"] .test-vibrate-btn {
+  background: #162032;
+  color: #cbd5e1;
+  border-color: #28354c;
+}
+[data-theme="dark"] .haptic-pill {
+  color: #4ade80;
 }
 
 /* Break Schedule & Slot Dark Theme */
