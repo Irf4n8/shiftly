@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
-  Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles
+  Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
+  BarChart3, Radio, CreditCard, Award
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -257,6 +258,277 @@ function AirportBoardTimer({ seconds = 0, shuffleKey = 0, onShuffle }) {
   );
 }
 
+function RfidPunchScreen({ onComplete }) {
+  const [step, setStep] = useState(0); // 0: approaching, 1: scanning, 2: authorized, 3: exit
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setStep(1), 500);
+    const t2 = setTimeout(() => setStep(2), 1250);
+    const t3 = setTimeout(() => setStep(3), 1950);
+    const t4 = setTimeout(() => onComplete(), 2250);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [onComplete]);
+
+  return (
+    <div className={`rfid-splash-overlay ${step === 3 ? "fade-out" : ""}`}>
+      <button type="button" className="rfid-skip-btn" onClick={onComplete} aria-label="Skip punch-in animation">
+        Skip ↗
+      </button>
+
+      <div className="rfid-terminal-box">
+        {/* Terminal Top Bezel */}
+        <div className="rfid-terminal-header">
+          <div className="rfid-terminal-brand">
+            <span className="rfid-terminal-dot" />
+            <span>SHIFTLY TERMINAL // RFID-2026</span>
+          </div>
+          <span className="rfid-terminal-mode">NFC READY</span>
+        </div>
+
+        {/* Contactless Sensor Pad */}
+        <div className="rfid-sensor-pad">
+          <div className={`rfid-wave-ring ${step >= 1 ? "pulse" : ""}`} />
+          <div className={`rfid-wave-ring r2 ${step >= 1 ? "pulse" : ""}`} />
+          <div className={`rfid-wave-ring r3 ${step >= 1 ? "pulse" : ""}`} />
+          <div className="rfid-pad-center">
+            <Radio size={28} />
+          </div>
+          <span className="rfid-pad-text">HOLD CARD TO SENSOR</span>
+        </div>
+
+        {/* The Shiftly RFID Smart Card Badge */}
+        <div className={`rfid-card-entity ${step >= 1 ? "docked" : "floating"} ${step >= 2 ? "verified" : ""}`}>
+          <div className="rfid-card-top">
+            <span className="rfid-card-logo">
+              <Zap size={14} /> SHIFT<span>LY</span>
+            </span>
+            <span className="rfid-chip-hardware">
+              <span className="chip-grid" />
+            </span>
+          </div>
+          <div className="rfid-card-body">
+            <div className="rfid-badge-avatar">
+              <span className="avatar-silhouette">👤</span>
+            </div>
+            <div className="rfid-badge-meta">
+              <strong>DAILY SHIFT PASS</strong>
+              <small>ID: SHF-2026-948</small>
+              <span className="rfid-badge-pill">
+                {step >= 2 ? "AUTHORIZED" : "NFC CONTACTLESS"}
+              </span>
+            </div>
+          </div>
+          <div className="rfid-card-footer">
+            <span className="rfid-nfc-symbol">(( · )) RFID</span>
+            <span className="rfid-footer-tag">BIOMETRIC PUNCH</span>
+          </div>
+        </div>
+
+        {/* Interactive Laser Scanning Line */}
+        <div className={`rfid-scanner-laser ${step === 1 ? "active" : ""}`} />
+
+        {/* Live Terminal Telemetry readout */}
+        <div className={`rfid-status-badge ${step >= 2 ? "success" : step === 1 ? "scanning" : ""}`}>
+          {step === 0 && <span>APPROACHING RFID SENSOR…</span>}
+          {step === 1 && <span>READING NFC CHIP // VERIFYING ATTENDANCE…</span>}
+          {step >= 2 && <span>✓ CHECK-IN AUTHORIZED // SHIFT STARTED</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const daysData = useMemo(() => {
+    const list = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = todayKey(d);
+      const isToday = i === 0;
+
+      const match = (history || []).find((h) => h.date === key);
+      let workSec = 0;
+      let breakSec = 0;
+      let status = "NO_DATA";
+
+      if (isToday) {
+        workSec = currentSeconds;
+        status = "TODAY";
+      } else if (match) {
+        workSec = match.workSeconds || 0;
+        breakSec = match.breakSeconds || 0;
+        status = match.status || "COMPLETED";
+      }
+
+      const hours = Math.round((workSec / 3600) * 10) / 10;
+      const dayName = isToday ? "Today" : d.toLocaleDateString([], { weekday: "short" });
+      const dateFormatted = d.toLocaleDateString([], { month: "short", day: "numeric" });
+      const hitTarget = workSec >= 8 * 3600;
+
+      list.push({
+        dateKey: key,
+        dayName,
+        dateFormatted,
+        isToday,
+        workSec,
+        breakSec,
+        hours,
+        status,
+        hitTarget
+      });
+    }
+    return list;
+  }, [history, currentSeconds]);
+
+  // Summary calculations
+  const totalWorkedSeconds = daysData.reduce((acc, d) => acc + d.workSec, 0);
+  const totalHours = Math.round((totalWorkedSeconds / 3600) * 10) / 10;
+  const activeDaysCount = daysData.filter((d) => d.workSec > 0).length || 1;
+  const avgHours = Math.round((totalWorkedSeconds / activeDaysCount / 3600) * 10) / 10;
+  const targetDaysCount = daysData.filter((d) => d.hitTarget).length;
+
+  return (
+    <section className="analytics-section">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">WORK LOG TRENDS</p>
+          <h2>Shift analytics</h2>
+        </div>
+        <span className="analytics-pill">Last 7 Days</span>
+      </div>
+
+      <div className="analytics-card">
+        {/* KPI metrics row */}
+        <div className="analytics-kpis">
+          <div className="kpi-item">
+            <span className="kpi-label">7-DAY TOTAL</span>
+            <div className="kpi-value">{totalHours} <small>hrs</small></div>
+            <span className="kpi-sub">Across logged shifts</span>
+          </div>
+          <div className="kpi-item">
+            <span className="kpi-label">DAILY AVERAGE</span>
+            <div className="kpi-value">{avgHours} <small>hrs/day</small></div>
+            <span className="kpi-sub">{avgHours >= 8 ? "✓ Meeting 8h goal" : "Under 8h target"}</span>
+          </div>
+          <div className="kpi-item">
+            <span className="kpi-label">TARGET HIT RATE</span>
+            <div className="kpi-value">{targetDaysCount} <small>/ 7 days</small></div>
+            <span className="kpi-sub">{Math.round((targetDaysCount / 7) * 100)}% consistency</span>
+          </div>
+        </div>
+
+        {/* 7-Day Neo-Brutalist Bar Chart */}
+        <div className="chart-container">
+          <div className="chart-header">
+            <div className="chart-legend">
+              <span className="legend-item"><span className="legend-swatch hit" /> ≥ 8h Target</span>
+              <span className="legend-item"><span className="legend-swatch in-progress" /> &lt; 8h</span>
+            </div>
+            <span className="chart-goal-label">--- 8H GOAL ---</span>
+          </div>
+
+          <div className="chart-plot-area">
+            {/* 8-Hour Dashed Target Line */}
+            <div className="chart-target-line" style={{ bottom: "80%" }}>
+              <span className="target-tag">8h</span>
+            </div>
+
+            {/* Bars */}
+            <div className="chart-bars-row">
+              {daysData.map((d) => {
+                // Max height scale is 10 hours = 100%
+                const barHeightPercent = Math.min(100, Math.max(d.hours > 0 ? 8 : 4, (d.hours / 10) * 100));
+                const isSelected = selectedDay && selectedDay.dateKey === d.dateKey;
+
+                return (
+                  <div
+                    key={d.dateKey}
+                    className={`chart-bar-col ${d.isToday ? "is-today" : ""} ${isSelected ? "selected" : ""}`}
+                    onClick={() => setSelectedDay(isSelected ? null : d)}
+                  >
+                    <div className="bar-value-pill">
+                      {d.hours > 0 ? `${d.hours}h` : "—"}
+                    </div>
+                    <div className="bar-track">
+                      <div
+                        className={`bar-fill ${d.hitTarget ? "hit" : d.hours > 0 ? "partial" : "empty"}`}
+                        style={{ height: `${barHeightPercent}%` }}
+                      />
+                    </div>
+                    <div className="bar-label-group">
+                      <strong className="bar-day-name">{d.dayName}</strong>
+                      <small className="bar-date-num">{d.dateFormatted.split(" ")[1]}</small>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Interactive Inspection Details for tapped bar */}
+          {selectedDay && (
+            <div className="chart-detail-box">
+              <div className="detail-date">
+                <strong>{selectedDay.dayName}, {selectedDay.dateFormatted}</strong>
+                <span className={`detail-status ${selectedDay.hitTarget ? "hit" : ""}`}>
+                  {selectedDay.hitTarget ? "Target Reached (≥8h)" : selectedDay.hours > 0 ? "Under Target" : "No Shift Recorded"}
+                </span>
+              </div>
+              <div className="detail-stats">
+                <span>Actual Work: <b>{formatDuration(selectedDay.workSec)}</b></span>
+                <span>Break Taken: <b>{formatDuration(selectedDay.breakSec)}</b></span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Recent Shifts Mini Table */}
+        <div className="recent-shifts-wrap">
+          <div className="recent-shifts-header">
+            <h4>Recent recorded shifts</h4>
+            <span className="recent-count">Auto-synced from Google Sheets</span>
+          </div>
+          <div className="recent-shifts-list">
+            {daysData.filter((d) => d.workSec > 0).map((d) => (
+              <div className="shift-row" key={`recent-${d.dateKey}`}>
+                <div className="shift-row-date">
+                  <strong>{d.dayName}</strong>
+                  <span>{d.dateFormatted}</span>
+                </div>
+                <div className="shift-row-bar">
+                  <div className="shift-mini-track">
+                    <div
+                      className={`shift-mini-fill ${d.hitTarget ? "hit" : ""}`}
+                      style={{ width: `${Math.min(100, (d.workSec / (8 * 3600)) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="shift-hours-text">{formatDuration(d.workSec)}</span>
+                </div>
+                <div className="shift-row-badge">
+                  {d.hitTarget ? (
+                    <span className="badge-hit">8h+ Goal Met</span>
+                  ) : (
+                    <span className="badge-partial">{formatDuration(d.breakSec)} break</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const [accessCode, setAccessCode] = useState(() => sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access") || "");
   const [codeInput, setCodeInput] = useState("");
@@ -270,6 +542,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [connected, setConnected] = useState(false);
   const [shuffleKey, setShuffleKey] = useState(0);
+  const [showRfidIntro, setShowRfidIntro] = useState(true);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("shiftly_theme") || "light";
   });
@@ -602,6 +875,7 @@ export default function App() {
   if (!authenticated || !accessCode) {
     return (
       <main className="shell auth-shell">
+        {showRfidIntro && <RfidPunchScreen onComplete={() => setShowRfidIntro(false)} />}
         <header className="topbar">
           <a className="brand" href="/" aria-label="Shiftly home">
             <span className="brand-mark"><Zap size={18} /></span>
@@ -609,6 +883,15 @@ export default function App() {
             <span className="brand-pill">NEO</span>
           </a>
           <div className="topbar-right">
+            <button
+              type="button"
+              className="theme-toggle-btn rfid-btn"
+              onClick={() => setShowRfidIntro(true)}
+              title="Replay Shiftly RFID Punch-in animation"
+            >
+              <Radio size={14} />
+              <span>RFID</span>
+            </button>
             <button
               type="button"
               className="theme-toggle-btn"
@@ -641,6 +924,7 @@ export default function App() {
 
   return (
     <main className="shell">
+      {showRfidIntro && <RfidPunchScreen onComplete={() => setShowRfidIntro(false)} />}
       <header className="topbar">
         <a className="brand" href="/" aria-label="Shiftly home">
           <span className="brand-mark"><Zap size={18} /></span>
@@ -648,6 +932,15 @@ export default function App() {
           <span className="brand-pill">NEO</span>
         </a>
         <div className="topbar-right">
+          <button
+            type="button"
+            className="theme-toggle-btn rfid-btn"
+            onClick={() => setShowRfidIntro(true)}
+            title="Replay Shiftly RFID Punch-in animation"
+          >
+            <Radio size={14} />
+            <span>RFID</span>
+          </button>
           <button
             type="button"
             className="theme-toggle-btn"
@@ -975,6 +1268,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <ShiftAnalyticsDashboard history={history} currentSeconds={summary.workSeconds} />
 
       <footer>
         <span>Shiftly <span className="footer-dot">·</span> Smart Workday Tracker</span>

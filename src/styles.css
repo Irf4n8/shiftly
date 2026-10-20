@@ -52,43 +52,43 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0d0f17;
-  --bg-pattern-color: rgba(255, 255, 255, 0.08);
-  --surface: #161926;
-  --surface-alt: #1c2032;
-  --surface-muted: #242940;
-  --surface-highlight: #312e81;
+  --bg: #090c15;
+  --bg-pattern-color: rgba(255, 255, 255, 0.05);
+  --surface: #101524;
+  --surface-alt: #161c2e;
+  --surface-muted: #1e263d;
+  --surface-highlight: #1e294b;
 
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
 
-  --border: #ffffff;
-  --border-width: 2.5px;
-  --border-heavy: 3px;
-  --shadow-color: #000000;
+  --border: #232d42;
+  --border-width: 2px;
+  --border-heavy: 2.5px;
+  --shadow-color: #030408;
 
-  /* Hard Offset Drop Shadows in Dark Mode */
-  --shadow-xs: 2px 2px 0px #000000;
-  --shadow-sm: 3px 3px 0px #000000;
-  --shadow-md: 4px 4px 0px #000000;
-  --shadow-lg: 6px 6px 0px #000000;
-  --shadow-xl: 8px 8px 0px #000000;
+  /* Hard Offset Drop Shadows in Dark Mode with deep contrast */
+  --shadow-xs: 2px 2px 0px #030408;
+  --shadow-sm: 3px 3px 0px #030408;
+  --shadow-md: 4px 4px 0px #030408;
+  --shadow-lg: 6px 6px 0px #030408;
+  --shadow-xl: 8px 8px 0px #030408;
 
-  --accent-work: #3b82f6;
-  --accent-work-text: #ffffff;
-  --accent-break: #fbbf24;
-  --accent-break-text: #000000;
-  --accent-resume: #8b5cf6;
-  --accent-resume-text: #ffffff;
+  --accent-work: #38bdf8;
+  --accent-work-text: #050505;
+  --accent-break: #facc15;
+  --accent-break-text: #050505;
+  --accent-resume: #a78bfa;
+  --accent-resume-text: #050505;
   --accent-end: #fb7185;
-  --accent-end-text: #000000;
+  --accent-end-text: #050505;
   --accent-danger: #f87171;
 
-  --brand-pill-bg: #facc15;
-  --brand-pill-text: #000000;
-  --connection-online-bg: #1e293b;
-  --connection-online-text: #93c5fd;
+  --brand-pill-bg: #38bdf8;
+  --brand-pill-text: #050505;
+  --connection-online-bg: #132238;
+  --connection-online-text: #7dd3fc;
 }
 
 * {
@@ -1499,6 +1499,792 @@ h2 {
   margin-top: 6px;
 }
 
+/* =========================================================================
+   RFID Check-in Splash Screen Animation
+   ========================================================================= */
+.rfid-splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #060810;
+  background-image: 
+    radial-gradient(rgba(56, 189, 248, 0.09) 1.5px, transparent 1.5px),
+    linear-gradient(180deg, #060810 0%, #0d1220 100%);
+  background-size: 24px 24px, 100% 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.rfid-splash-overlay.fade-out {
+  opacity: 0;
+  transform: scale(1.03);
+  pointer-events: none;
+}
+
+.rfid-skip-btn {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #f1f5f9;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #000;
+  transition: all 0.15s ease;
+  z-index: 10;
+}
+.rfid-skip-btn:hover {
+  background: #38bdf8;
+  color: #000000;
+  border-color: #38bdf8;
+}
+
+.rfid-terminal-box {
+  position: relative;
+  width: min(100%, 370px);
+  background: #0f1424;
+  border: 3px solid #000000;
+  border-radius: 26px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 6px 6px 0px #000000;
+  padding: 24px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.rfid-terminal-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px dashed rgba(255, 255, 255, 0.15);
+  padding-bottom: 10px;
+}
+.rfid-terminal-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 1px;
+}
+.rfid-terminal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: pulseCyan 1.4s infinite;
+}
+.rfid-terminal-mode {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+
+/* Contactless Sensor Pad */
+.rfid-sensor-pad {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px dashed rgba(56, 189, 248, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 6px 0;
+}
+.rfid-pad-center {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 2px solid #38bdf8;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+}
+.rfid-pad-text {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  z-index: 2;
+}
+
+/* Expanding Radar/RFID Wave Rings */
+.rfid-wave-ring {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid #38bdf8;
+  opacity: 0;
+  pointer-events: none;
+}
+.rfid-wave-ring.pulse {
+  animation: rfidWave 1.4s infinite ease-out;
+}
+.rfid-wave-ring.r2.pulse {
+  animation: rfidWave 1.4s infinite ease-out 0.4s;
+}
+.rfid-wave-ring.r3.pulse {
+  animation: rfidWave 1.4s infinite ease-out 0.8s;
+}
+@keyframes rfidWave {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* The Shiftly RFID Smart Card */
+.rfid-card-entity {
+  width: 100%;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2.5px solid #000000;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65), 4px 4px 0px #000000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease;
+}
+.rfid-card-entity.floating {
+  transform: translateY(-16px) rotate(-3deg);
+}
+.rfid-card-entity.docked {
+  transform: translateY(0px) rotate(0deg);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 2px 2px 0px #000000;
+}
+.rfid-card-entity.verified {
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.35), 4px 4px 0px #000000;
+}
+
+.rfid-card-entity::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #facc15);
+}
+
+.rfid-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rfid-card-logo {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 900;
+  color: #ffffff;
+}
+.rfid-card-logo span { color: #38bdf8; }
+
+.rfid-chip-hardware {
+  width: 28px;
+  height: 20px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-radius: 4px;
+  border: 1px solid #78350f;
+  display: grid;
+  place-items: center;
+}
+.chip-grid {
+  width: 16px;
+  height: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.rfid-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rfid-badge-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #334155;
+  border: 1.5px solid #475569;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+.rfid-badge-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rfid-badge-meta strong {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+}
+.rfid-badge-meta small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #94a3b8;
+}
+.rfid-badge-pill {
+  display: inline-block;
+  width: fit-content;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  background: #38bdf8;
+  color: #000000;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+.rfid-card-entity.verified .rfid-badge-pill {
+  background: #22c55e;
+  color: #000000;
+}
+
+.rfid-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+/* Laser Scanner Bar */
+.rfid-scanner-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #38bdf8;
+  box-shadow: 0 0 12px #38bdf8, 0 0 24px #38bdf8;
+  opacity: 0;
+  top: 30%;
+}
+.rfid-scanner-laser.active {
+  opacity: 1;
+  animation: laserScan 0.8s infinite ease-in-out alternate;
+}
+@keyframes laserScan {
+  0% { top: 35%; }
+  100% { top: 75%; }
+}
+
+/* Status Badge Readout */
+.rfid-status-badge {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid #000000;
+  background: #090c14;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 2px 2px 0 #000;
+}
+.rfid-status-badge.scanning {
+  color: #38bdf8;
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+}
+.rfid-status-badge.success {
+  color: #22c55e;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+/* =========================================================================
+   Shift Analytics Dashboard & Neo-Brutalist Graph
+   ========================================================================= */
+.analytics-section {
+  margin-top: 36px;
+}
+
+.analytics-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xs);
+  color: var(--text-main);
+}
+
+.analytics-card {
+  background: var(--surface);
+  border: var(--border-heavy) solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* KPI row */
+.analytics-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.kpi-item {
+  background: var(--surface-alt);
+  border: var(--border-width) solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--shadow-xs);
+}
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.8px;
+}
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--text-main);
+  margin: 4px 0 2px;
+}
+.kpi-value small {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.kpi-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* 7-Day Chart Container */
+.chart-container {
+  background: var(--surface-alt);
+  border: var(--border-width) solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+.chart-legend {
+  display: flex;
+  gap: 14px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+.legend-swatch.hit { background: var(--accent-work); }
+.legend-swatch.in-progress { background: var(--accent-break); }
+.chart-goal-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+/* Plot Area */
+.chart-plot-area {
+  position: relative;
+  height: 190px;
+  border-bottom: var(--border-width) solid var(--border);
+  padding-bottom: 2px;
+}
+
+.chart-target-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  border-top: 2px dashed rgba(239, 68, 68, 0.6);
+  z-index: 1;
+  pointer-events: none;
+}
+.target-tag {
+  position: absolute;
+  right: 0;
+  top: -10px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+}
+[data-theme="dark"] .target-tag {
+  background: #2b1318;
+  color: #fca5a5;
+}
+
+/* Bars row */
+.chart-bars-row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+}
+
+.chart-bar-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: transform 0.12s ease;
+}
+.chart-bar-col:hover {
+  transform: translateY(-2px);
+}
+.chart-bar-col.selected .bar-fill {
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+}
+
+.bar-value-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.bar-track {
+  width: min(100%, 36px);
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bar-fill {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  border: var(--border-width) solid var(--border);
+  border-bottom: none;
+  box-shadow: var(--shadow-xs);
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+}
+.bar-fill.hit {
+  background: var(--accent-work);
+}
+.bar-fill.partial {
+  background: var(--accent-break);
+}
+.bar-fill.empty {
+  background: var(--surface-muted);
+}
+
+.bar-label-group {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.bar-day-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+.chart-bar-col.is-today .bar-day-name {
+  color: var(--accent-work);
+}
+.bar-date-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Inspection details box */
+.chart-detail-box {
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  animation: fadeIn 0.15s ease;
+}
+.detail-date strong {
+  font-size: 13px;
+  font-family: var(--font-display);
+}
+.detail-status {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.detail-status.hit {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+[data-theme="dark"] .detail-status.hit {
+  background: #10263f;
+  color: #7dd3fc;
+}
+.detail-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.detail-stats b {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+}
+
+/* Recent Shifts List */
+.recent-shifts-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.recent-shifts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.recent-shifts-header h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+.recent-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.recent-shifts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shift-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--surface-alt);
+  border: var(--border-width) solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+}
+.shift-row-date {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 65px;
+}
+.shift-row-date strong {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-main);
+}
+.shift-row-date span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.shift-row-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.shift-mini-track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-muted);
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.shift-mini-fill {
+  height: 100%;
+  background: var(--accent-break);
+  border-radius: 3px;
+}
+.shift-mini-fill.hit {
+  background: var(--accent-work);
+}
+.shift-hours-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.shift-row-badge {
+  flex-shrink: 0;
+}
+.badge-hit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--connection-online-bg);
+  color: var(--connection-online-text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.badge-partial {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+/* =========================================================================
+   Dark Theme Specific UI/UX Polish
+   ========================================================================= */
+[data-theme="dark"] .alert.error {
+  background: #231115;
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+[data-theme="dark"] .alert.success {
+  background: #0b1f33;
+  border-color: #38bdf8;
+  color: #7dd3fc;
+}
+[data-theme="dark"] .action-button.primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1e293b;
+}
+[data-theme="dark"] .action-button.secondary {
+  background: #e11d48;
+  color: #ffffff;
+  border-color: #1e293b;
+}
+[data-theme="dark"] .metric-icon.break {
+  background: #262010;
+  color: #facc15;
+}
+[data-theme="dark"] .metric-icon.lunch {
+  background: #0f2438;
+  color: #38bdf8;
+}
+[data-theme="dark"] .time-input,
+[data-theme="dark"] .select-input,
+[data-theme="dark"] .auth-form input {
+  background: #090c14;
+  border-color: #2b3650;
+  color: #f1f5f9;
+}
+[data-theme="dark"] .time-input:focus,
+[data-theme="dark"] .select-input:focus,
+[data-theme="dark"] .auth-form input:focus {
+  background: #101524;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+[data-theme="dark"] .modal-box {
+  background: #101422;
+  border-color: #2b3650;
+}
+[data-theme="dark"] .hero-icon {
+  background: #192033;
+  color: #38bdf8;
+  border-color: var(--border);
+}
+[data-theme="dark"] .rfid-btn {
+  background: #101524;
+  border-color: #2b3650;
+  color: #38bdf8;
+}
+[data-theme="dark"] .chip-btn {
+  background: #161c2d;
+  color: #f1f5f9;
+  border-color: #2b3650;
+}
+[data-theme="dark"] .chip-btn:hover {
+  background: #20283e;
+  color: #38bdf8;
+}
+
 footer {
   display: flex;
   justify-content: space-between;
@@ -1566,24 +2352,20 @@ footer {
     border-radius: 10px;
   }
 
-  /* Airport Board Mobile Scaling */
-  .airport-board-wrapper {
-    width: 100%;
-    padding: 10px 12px;
-  }
-  .airport-board-grid {
-    justify-content: space-between;
-    gap: 3px;
+  /* Flap Display Mobile Scaling */
+  .flap-display {
+    gap: 8px;
+    margin: 4px 0 8px;
   }
   .flap-group {
-    gap: 2px;
+    gap: 3px;
   }
   .flap-tile {
-    width: clamp(26px, 8.2vw, 40px);
-    height: clamp(40px, 12vw, 58px);
+    width: clamp(28px, 8.2vw, 42px);
+    height: clamp(42px, 12vw, 60px);
   }
   .flap-char {
-    font-size: clamp(20px, 7vw, 34px);
+    font-size: clamp(22px, 7.5vw, 36px);
   }
 
   /* Stack metrics cleanly on phone */
@@ -1594,6 +2376,28 @@ footer {
   .metric-card {
     padding: 18px 20px;
     border-radius: 14px;
+  }
+
+  /* Analytics mobile scaling */
+  .analytics-kpis {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .chart-plot-area {
+    height: 160px;
+  }
+  .chart-legend {
+    display: none;
+  }
+  .bar-value-pill {
+    font-size: 9px;
+  }
+  .bar-day-name {
+    font-size: 10px;
+  }
+  .shift-row {
+    padding: 8px 10px;
+    gap: 8px;
   }
 
   /* Single column full-width punch buttons */
