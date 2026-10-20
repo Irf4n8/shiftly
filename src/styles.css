@@ -450,129 +450,54 @@ h1 span {
 /* =========================================================================
    Airport Split-Flap Board (Solari Board)
    ========================================================================= */
-.airport-board-wrapper {
-  background: #090b12;
-  border: var(--border-heavy) solid #000000;
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), var(--shadow-md);
+/* =========================================================================
+   Flip-Flap Number Tiles (Mechanical Solari Split-Flap Display)
+   ========================================================================= */
+.flap-display {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: fit-content;
-  max-width: 100%;
-  margin: 4px 0 2px;
-  user-select: none;
-}
-
-[data-theme="dark"] .airport-board-wrapper {
-  background: #06080e;
-  border-color: #2e344e;
-}
-
-.airport-board-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.18);
-}
-
-.airport-board-tag {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #facc15;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-}
-
-.blinking-board-lamp {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef4444;
-  animation: boardBlink 1.2s infinite ease-in-out;
-}
-@keyframes boardBlink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.8); }
-}
-
-.airport-board-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.airport-board-flight {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 800;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.board-replay-btn {
-  background: #facc15;
-  color: #000000;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 900;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1.5px solid #000000;
-  box-shadow: 1.5px 1.5px 0 #000000;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+  user-select: none;
   cursor: pointer;
-  transition: transform .1s, box-shadow .1s;
-}
-.board-replay-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 2px 2px 0 #000000;
-}
-.board-replay-btn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 0 0 0 transparent;
-}
-
-.airport-board-grid {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  overflow-x: auto;
-  padding: 2px 0;
+  width: fit-content;
 }
 
 .flap-group {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .flap-tile {
   position: relative;
-  width: clamp(30px, 6.5vw, 44px);
-  height: clamp(44px, 9.5vw, 64px);
-  background: linear-gradient(180deg, #181b26 0%, #0f121a 49%, #080a10 51%, #121520 100%);
-  border-radius: 7px;
-  border: 2px solid #000000;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  width: clamp(34px, 7vw, 48px);
+  height: clamp(50px, 10.5vw, 68px);
+  background: linear-gradient(180deg, #181b26 0%, #10131d 49%, #080a10 51%, #121520 100%);
+  border-radius: 8px;
+  border: var(--border-width) solid #000000;
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 250px;
+  perspective: 260px;
   overflow: hidden;
   user-select: none;
+  transition: transform .1s ease, box-shadow .1s ease;
 }
 
-/* Mechanical horizontal split line */
+[data-theme="dark"] .flap-tile {
+  border-color: #ffffff;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.flap-display:hover .flap-tile {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Mechanical horizontal split line across the flap center */
 .flap-tile::before {
   content: "";
   position: absolute;
@@ -582,10 +507,10 @@ h1 span {
   height: 1.5px;
   background: #000000;
   z-index: 10;
-  box-shadow: 0 1px 1px rgba(255, 255, 255, 0.12);
+  box-shadow: 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
-/* Side mounting pins */
+/* Side mounting hinge pins */
 .flap-tile::after {
   content: "";
   position: absolute;
@@ -596,12 +521,12 @@ h1 span {
   background: #64748b;
   border-radius: 1px;
   z-index: 11;
-  box-shadow: calc(clamp(30px, 6.5vw, 44px) - 5px) 0 0 #64748b;
+  box-shadow: calc(clamp(34px, 7vw, 48px) - 5px) 0 0 #64748b;
 }
 
 .flap-char {
   font-family: var(--font-mono);
-  font-size: clamp(24px, 5.8vw, 38px);
+  font-size: clamp(28px, 6.2vw, 42px);
   font-weight: 800;
   line-height: 1;
   color: #fef08a;
@@ -634,21 +559,11 @@ h1 span {
 }
 
 .flap-unit {
-  font-family: var(--font-mono);
-  font-size: clamp(12px, 3vw, 16px);
-  font-weight: 900;
-  color: #38bdf8;
-  margin-left: 3px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.flap-separator {
-  font-family: var(--font-mono);
-  font-size: clamp(18px, 4.2vw, 28px);
-  font-weight: 900;
-  color: #475569;
-  margin: 0 1px;
-  line-height: 1;
+  font-family: var(--font-display);
+  font-size: clamp(14px, 3.2vw, 20px);
+  font-weight: 800;
+  color: var(--accent-work);
+  margin-left: 4px;
 }
 
 .target-line {

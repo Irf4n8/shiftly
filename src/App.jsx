@@ -214,64 +214,44 @@ function AirportBoardTimer({ seconds = 0, shuffleKey = 0, onShuffle }) {
   }, [targetH, targetM, targetS]);
 
   return (
-    <div className="airport-board-wrapper" role="timer" aria-label={`Actual work time: ${targetH} hours ${targetM} minutes ${targetS} seconds`}>
-      <div className="airport-board-header">
-        <div className="airport-board-tag">
-          <span className="blinking-board-lamp" />
-          <span>DEPARTURES // ACTUAL WORK TIME</span>
+    <div
+      className="flap-display"
+      role="timer"
+      aria-label={`Actual work time: ${targetH} hours ${targetM} minutes ${targetS} seconds`}
+      onClick={onShuffle}
+      title="Click to replay split-flap animation"
+    >
+      {/* Hours */}
+      <div className="flap-group">
+        <div className={`flap-tile ${flippingFlags[0] ? "flipping" : ""}`}>
+          <span className="flap-char">{displayDigits[0]}</span>
         </div>
-        <div className="airport-board-actions">
-          <span className="airport-board-flight">GATE 08H</span>
-          {onShuffle && (
-            <button
-              type="button"
-              className="board-replay-btn"
-              onClick={onShuffle}
-              title="Re-run split-flap flight board animation"
-            >
-              ↻ FLIP
-            </button>
-          )}
+        <div className={`flap-tile ${flippingFlags[1] ? "flipping" : ""}`}>
+          <span className="flap-char">{displayDigits[1]}</span>
         </div>
+        <span className="flap-unit">h</span>
       </div>
 
-      <div className="airport-board-grid">
-        {/* Hours */}
-        <div className="flap-group">
-          <div className={`flap-tile ${flippingFlags[0] ? "flipping" : ""}`}>
-            <span className="flap-char">{displayDigits[0]}</span>
-          </div>
-          <div className={`flap-tile ${flippingFlags[1] ? "flipping" : ""}`}>
-            <span className="flap-char">{displayDigits[1]}</span>
-          </div>
-          <span className="flap-unit">H</span>
+      {/* Minutes */}
+      <div className="flap-group">
+        <div className={`flap-tile ${flippingFlags[2] ? "flipping" : ""}`}>
+          <span className="flap-char">{displayDigits[2]}</span>
         </div>
-
-        <span className="flap-separator">:</span>
-
-        {/* Minutes */}
-        <div className="flap-group">
-          <div className={`flap-tile ${flippingFlags[2] ? "flipping" : ""}`}>
-            <span className="flap-char">{displayDigits[2]}</span>
-          </div>
-          <div className={`flap-tile ${flippingFlags[3] ? "flipping" : ""}`}>
-            <span className="flap-char">{displayDigits[3]}</span>
-          </div>
-          <span className="flap-unit">M</span>
+        <div className={`flap-tile ${flippingFlags[3] ? "flipping" : ""}`}>
+          <span className="flap-char">{displayDigits[3]}</span>
         </div>
+        <span className="flap-unit">m</span>
+      </div>
 
-        <span className="flap-separator">:</span>
-
-        {/* Seconds */}
-        <div className="flap-group">
-          <div className={`flap-tile ${flippingFlags[4] ? "flipping" : ""}`}>
-            <span className="flap-char">{displayDigits[4]}</span>
-          </div>
-          <div className={`flap-tile ${flippingFlags[5] ? "flipping" : ""}`}>
-            <span className="flap-char">{displayDigits[5]}</span>
-          </div>
-          <span className="flap-unit">S</span>
+      {/* Seconds */}
+      <div className="flap-group">
+        <div className={`flap-tile ${flippingFlags[4] ? "flipping" : ""}`}>
+          <span className="flap-char">{displayDigits[4]}</span>
         </div>
+        <div className={`flap-tile ${flippingFlags[5] ? "flipping" : ""}`}>
+          <span className="flap-char">{displayDigits[5]}</span>
+        </div>
+        <span className="flap-unit">s</span>
       </div>
     </div>
   );
