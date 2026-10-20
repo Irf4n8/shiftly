@@ -1135,7 +1135,13 @@ export default function App() {
           <form onSubmit={login} className="auth-form">
             <label htmlFor="access-code">Access code</label>
             <input id="access-code" type="password" autoComplete="current-password" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} placeholder="Enter your access code" required />
-            <button className="action-button primary auth-submit" type="submit" disabled={busy || !codeInput.trim()}><span><strong>{busy ? "Checking…" : "Unlock dashboard"}</strong><small>Your code is checked securely on the server</small></span><span className="action-arrow">↗</span></button>
+            <button className="action-button primary auth-submit" type="submit" disabled={busy || !codeInput.trim()}>
+              <span className="action-text">
+                <strong>{busy ? "Checking…" : "Unlock dashboard"}</strong>
+                <small>Your code is checked securely on the server</small>
+              </span>
+              <span className="action-arrow">↗</span>
+            </button>
           </form>
           <p className="helper-note">Set APP_ACCESS_CODE in your Vercel environment variables before using the deployed app.</p>
         </section>
@@ -1310,7 +1316,7 @@ export default function App() {
           {summary.status === "NOT_STARTED" && (
             <button className="action-button action-start-work" disabled={busy || loading} onClick={() => punch("START_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><ArrowDownToLine size={21} /></span>
-              <span>
+              <span className="action-text">
                 <strong>{customTimeFormatted ? `Start Work (${customTimeFormatted})` : "Start Work"}</strong>
                 <small>{customTimeFormatted ? `Record punch-in set at ${customTimeFormatted}` : "Record your first punch-in"}</small>
               </span>
@@ -1320,7 +1326,7 @@ export default function App() {
           {summary.status === "WORKING" && (
             <button className="action-button action-start-break" disabled={busy || loading} onClick={() => punch("START_BREAK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><Coffee size={21} /></span>
-              <span>
+              <span className="action-text">
                 <strong>{customTimeFormatted ? `Start Break (${customTimeFormatted})` : "Start Break"}</strong>
                 <small>{customTimeFormatted ? `Pause timer set at ${customTimeFormatted}` : "Pause your work timer"}</small>
               </span>
@@ -1330,7 +1336,7 @@ export default function App() {
           {summary.status === "ON_BREAK" && (
             <button className="action-button action-resume-work" disabled={busy || loading} onClick={() => punch("RESUME_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><ArrowUpFromLine size={21} /></span>
-              <span>
+              <span className="action-text">
                 <strong>{customTimeFormatted ? `Resume Work (${customTimeFormatted})` : "Resume Work"}</strong>
                 <small>{customTimeFormatted ? `End break set at ${customTimeFormatted}` : "End your current break"}</small>
               </span>
@@ -1344,7 +1350,7 @@ export default function App() {
               }
             }}>
               <span className="action-icon"><ArrowDownToLine size={21} /></span>
-              <span>
+              <span className="action-text">
                 <strong>{customTimeFormatted ? `End Day (${customTimeFormatted})` : "End Day"}</strong>
                 <small>Close today's attendance</small>
               </span>
