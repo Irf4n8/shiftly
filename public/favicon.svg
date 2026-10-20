@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Hard neo-brutalist offset drop shadow -->
+  <rect x="11" y="11" width="46" height="46" rx="13" fill="#000000" />
+  <!-- Main badge body -->
+  <rect x="7" y="7" width="46" height="46" rx="13" fill="#2563eb" stroke="#000000" stroke-width="3.6" stroke-linejoin="round" />
+  <!-- White Zap lightning bolt -->
+  <polygon points="31.4,16.5 17.8,32.7 30.0,32.7 28.6,43.5 42.1,27.3 30.0,27.3"
+           fill="none"
+           stroke="#ffffff"
+           stroke-width="3.6"
+           stroke-linecap="round"
+           stroke-linejoin="round" />
+</svg>

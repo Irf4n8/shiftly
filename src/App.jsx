@@ -792,7 +792,7 @@ export default function App() {
       <main className="shell auth-shell">
         <header className="topbar">
           <a className="brand" href="/" aria-label="Shiftly home">
-            <span className="brand-mark"><img src="/favicon.png" alt="Shiftly logo" className="brand-logo-img" /></span>
+            <span className="brand-mark"><Zap size={18} /></span>
             <span>Shift<span className="brand-accent">ly</span></span>
             <span className="brand-pill">NEO</span>
           </a>
@@ -810,7 +810,7 @@ export default function App() {
           </div>
         </header>
         <section className="auth-card">
-          <div className="brand-mark auth-mark"><img src="/favicon.png" alt="Shiftly logo" className="brand-logo-img" /></div>
+          <div className="brand-mark auth-mark"><Zap size={24} /></div>
           <p className="eyebrow">SMART WORKDAY & SHIFT TRACKER</p>
           <h1>Welcome <span>back.</span></h1>
           <p className="auth-copy">Enter your access code to open your Shiftly dashboard.</p>
@@ -831,7 +831,7 @@ export default function App() {
     <main className="shell">
       <header className="topbar">
         <a className="brand" href="/" aria-label="Shiftly home">
-          <span className="brand-mark"><img src="/favicon.png" alt="Shiftly logo" className="brand-logo-img" /></span>
+          <span className="brand-mark"><Zap size={18} /></span>
           <span>Shift<span className="brand-accent">ly</span></span>
           <span className="brand-pill">NEO</span>
         </a>

@@ -167,26 +167,10 @@ button {
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
   transition: transform .15s ease, box-shadow .15s ease;
-  overflow: hidden;
 }
 .brand:hover .brand-mark {
   transform: translate(-1px, -1px);
   box-shadow: var(--shadow-md);
-}
-
-.brand-logo-img {
-  width: 24px;
-  height: 24px;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-  display: block;
-  border-radius: 4px;
-}
-
-.brand-mark.auth-mark .brand-logo-img {
-  width: 32px;
-  height: 32px;
 }
 
 
