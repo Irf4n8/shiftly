@@ -770,23 +770,253 @@ h1 span {
   margin: 8px 0 0;
 }
 
-.break-breakdown {
+/* Break Schedule & 3-Window Policy Cards */
+.break-schedule-card {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-top: 12px;
 }
-.break-breakdown span {
+.metric-head-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.plan-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.break-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.break-slot-item {
+  background: #fafaf9;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  transition: all 0.2s ease;
+}
+.break-slot-item.active-now {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  box-shadow: 2px 2px 0px #16a34a;
+}
+.break-slot-item.slot-over {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.slot-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.slot-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.slot-title strong {
   font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+.slot-title small {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-weight: 600;
 }
-.break-breakdown b {
-  color: var(--text-main);
+.slot-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.slot-over-badge {
+  background: #dc2626;
+  color: #ffffff;
   font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #991b1b;
+  box-shadow: 1px 1px 0px #7f1d1d;
+  letter-spacing: -0.2px;
+}
+.slot-active-badge {
+  background: #16a34a;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #14532d;
+}
+.slot-used-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.slot-progress-track {
+  height: 6px;
+  background: #e7e5e4;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.slot-progress-bar {
+  height: 100%;
+  background: #0284c7;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.slot-progress-bar.over {
+  background: #dc2626;
+}
+
+/* =========================================================================
+   Smart Break Compensation Advisor Card
+   ========================================================================= */
+.compensation-card {
+  margin-top: 18px;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  box-shadow: 4px 4px 0px var(--border);
+  transition: all 0.2s ease;
+}
+.compensation-card.danger {
+  background: #fff5f5;
+  border-color: #ef4444;
+  box-shadow: 4px 4px 0px #b91c1c;
+}
+.compensation-card.warning {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  box-shadow: 4px 4px 0px #b45309;
+}
+.compensation-card.info {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  box-shadow: 4px 4px 0px #0369a1;
+}
+.compensation-card.success {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  box-shadow: 4px 4px 0px #15803d;
+}
+
+.compensation-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.compensation-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.compensation-card.danger .compensation-icon {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #ef4444;
+}
+.compensation-card.warning .compensation-icon {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #f59e0b;
+}
+.compensation-card.info .compensation-icon {
+  background: #bae6fd;
+  color: #0369a1;
+  border-color: #0284c7;
+}
+.compensation-card.success .compensation-icon {
+  background: #bbf7d0;
+  color: #15803d;
+  border-color: #16a34a;
+}
+
+.compensation-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+.compensation-title-area h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-main);
+}
+.compensation-headline {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 6px 0 4px;
+  line-height: 1.4;
+}
+.compensation-recommendation {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.compensation-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.compensation-option-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: 2px 2px 0px rgba(0,0,0,0.06);
+}
+.option-bullet {
+  color: #f59e0b;
+  font-size: 11px;
+  flex-shrink: 0;
 }
 
 /* =========================================================================
@@ -2108,6 +2338,121 @@ h2 {
   background: #0c2838;
   color: #38bdf8;
   border-color: #075985;
+}
+
+/* Break Schedule & Slot Dark Theme */
+[data-theme="dark"] .plan-badge-pill {
+  background: #1e1b4b;
+  color: #a5b4fc;
+  border-color: #4338ca;
+}
+[data-theme="dark"] .break-slot-item {
+  background: #0d1424;
+  border-color: #1e293b;
+}
+[data-theme="dark"] .break-slot-item.active-now {
+  background: #052e16;
+  border-color: #22c55e;
+  box-shadow: 2px 2px 0px #14532d;
+}
+[data-theme="dark"] .break-slot-item.slot-over {
+  background: #2b1115;
+  border-color: #ef4444;
+}
+[data-theme="dark"] .slot-title strong {
+  color: #f8fafc;
+}
+[data-theme="dark"] .slot-title small {
+  color: #94a3b8;
+}
+[data-theme="dark"] .slot-used-text {
+  color: #f1f5f9;
+}
+[data-theme="dark"] .slot-progress-track {
+  background: #1e293b;
+}
+[data-theme="dark"] .slot-progress-bar {
+  background: #38bdf8;
+}
+[data-theme="dark"] .slot-progress-bar.over {
+  background: #ef4444;
+}
+[data-theme="dark"] .slot-over-badge {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #f87171;
+  box-shadow: 1px 1px 0px #450a0a;
+}
+[data-theme="dark"] .slot-active-badge {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #4ade80;
+}
+
+/* Smart Compensation Advisor Dark Theme */
+[data-theme="dark"] .compensation-card {
+  box-shadow: 4px 4px 0px #02040a;
+}
+[data-theme="dark"] .compensation-card.danger {
+  background: #1f0b0e;
+  border-color: #ef4444;
+  box-shadow: 4px 4px 0px #450a0a;
+}
+[data-theme="dark"] .compensation-card.danger .compensation-icon {
+  background: #3f1016;
+  color: #fca5a5;
+  border-color: #ef4444;
+}
+[data-theme="dark"] .compensation-card.warning {
+  background: #231805;
+  border-color: #f59e0b;
+  box-shadow: 4px 4px 0px #451a03;
+}
+[data-theme="dark"] .compensation-card.warning .compensation-icon {
+  background: #451a03;
+  color: #fde047;
+  border-color: #f59e0b;
+}
+[data-theme="dark"] .compensation-card.info {
+  background: #082132;
+  border-color: #0284c7;
+  box-shadow: 4px 4px 0px #041f30;
+}
+[data-theme="dark"] .compensation-card.info .compensation-icon {
+  background: #0c4a6e;
+  color: #7dd3fc;
+  border-color: #38bdf8;
+}
+[data-theme="dark"] .compensation-card.success {
+  background: #062314;
+  border-color: #16a34a;
+  box-shadow: 4px 4px 0px #021a0d;
+}
+[data-theme="dark"] .compensation-card.success .compensation-icon {
+  background: #14532d;
+  color: #86efac;
+  border-color: #22c55e;
+}
+[data-theme="dark"] .compensation-eyebrow {
+  color: #94a3b8;
+}
+[data-theme="dark"] .compensation-title-area h3 {
+  color: #f8fafc;
+}
+[data-theme="dark"] .compensation-headline {
+  color: #f1f5f9;
+}
+[data-theme="dark"] .compensation-recommendation {
+  color: #94a3b8;
+}
+[data-theme="dark"] .compensation-option-pill {
+  background: #0b111e;
+  border-color: #28354c;
+  color: #e2e8f0;
+  box-shadow: 2px 2px 0px #02040a;
+}
+[data-theme="dark"] .option-bullet {
+  color: #fbbf24;
 }
 
 /* Custom Time Panel */

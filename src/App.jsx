@@ -3,7 +3,7 @@ import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
   Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
-  BarChart3
+  BarChart3, Scale, AlertTriangle, ShieldCheck, Compass, Info
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -14,6 +14,228 @@ const ACTION_LABELS = {
   RESUME_WORK: "Work resumed",
   END_DAY: "Day completed"
 };
+
+const BREAK_SLOT_CONFIGS = [
+  {
+    id: "morning",
+    name: "Morning Break",
+    shortName: "Morning",
+    windowLabel: "11:00 AM – 1:00 PM",
+    allowedMinutes: 15,
+    startHour: 11,
+    startMinute: 0,
+    endHour: 13,
+    endMinute: 0,
+  },
+  {
+    id: "lunch",
+    name: "Lunch Break",
+    shortName: "Lunch",
+    windowLabel: "1:00 PM – 4:00 PM",
+    allowedMinutes: 30,
+    startHour: 13,
+    startMinute: 0,
+    endHour: 16,
+    endMinute: 0,
+  },
+  {
+    id: "evening",
+    name: "Evening Break",
+    shortName: "Evening",
+    windowLabel: "4:00 PM – 6:30 PM",
+    allowedMinutes: 15,
+    startHour: 16,
+    startMinute: 0,
+    endHour: 18,
+    endMinute: 30,
+  },
+];
+
+function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT_STARTED") {
+  const slots = BREAK_SLOT_CONFIGS.map((cfg) => ({
+    ...cfg,
+    usedSeconds: 0,
+    breaksCount: 0,
+    isActiveNow: false,
+  }));
+
+  let pendingBreakStart = null;
+  for (const event of events) {
+    const t = new Date(event.timestamp).getTime();
+    if (!Number.isFinite(t)) continue;
+
+    if (event.action === "START_BREAK") {
+      pendingBreakStart = t;
+    } else if ((event.action === "RESUME_WORK" || event.action === "END_DAY") && pendingBreakStart !== null) {
+      allocateBreak(pendingBreakStart, t, false);
+      pendingBreakStart = null;
+    }
+  }
+
+  if (currentStatus === "ON_BREAK" && pendingBreakStart !== null) {
+    allocateBreak(pendingBreakStart, nowMs, true);
+  }
+
+  function allocateBreak(startMs, endMs, isActive) {
+    const durSec = Math.max(0, (endMs - startMs) / 1000);
+    const d = new Date(startMs);
+    const minOfDay = d.getHours() * 60 + d.getMinutes();
+
+    let slotIdx = 0;
+    if (minOfDay < 780) {
+      slotIdx = 0; // Morning (11:00 AM – 1:00 PM)
+    } else if (minOfDay < 960) {
+      slotIdx = 1; // Lunch (1:00 PM – 4:00 PM)
+    } else {
+      slotIdx = 2; // Evening (4:00 PM – 6:30 PM)
+    }
+
+    slots[slotIdx].usedSeconds += durSec;
+    slots[slotIdx].breaksCount += 1;
+    if (isActive) {
+      slots[slotIdx].isActiveNow = true;
+    }
+  }
+
+  const now = new Date(nowMs);
+  const currentMinOfDay = now.getHours() * 60 + now.getMinutes();
+
+  let totalExtraSeconds = 0;
+  const slotResults = slots.map((s) => {
+    const allowedSeconds = s.allowedMinutes * 60;
+    const usedMinutes = Math.round(s.usedSeconds / 60);
+    const extraSeconds = Math.max(0, s.usedSeconds - allowedSeconds);
+    const extraMinutes = Math.ceil(extraSeconds / 60);
+    const remainingSeconds = Math.max(0, allowedSeconds - s.usedSeconds);
+    const remainingMinutes = Math.floor(remainingSeconds / 60);
+    totalExtraSeconds += extraSeconds;
+
+    const startMin = s.startHour * 60 + s.startMinute;
+    const endMin = s.endHour * 60 + s.endMinute;
+    const isCurrentWindow = currentMinOfDay >= startMin && currentMinOfDay <= endMin;
+    const isPast = currentMinOfDay > endMin;
+    const isUpcoming = currentMinOfDay < startMin;
+
+    return {
+      ...s,
+      usedMinutes,
+      extraSeconds,
+      extraMinutes,
+      remainingSeconds,
+      remainingMinutes,
+      isOver: extraMinutes > 0,
+      isCurrentWindow,
+      isPast,
+      isUpcoming,
+    };
+  });
+
+  const totalExtraMinutes = Math.ceil(totalExtraSeconds / 60);
+
+  return {
+    slots: slotResults,
+    totalExtraSeconds,
+    totalExtraMinutes,
+    currentMinOfDay,
+  };
+}
+
+function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd) {
+  const { slots, totalExtraMinutes, currentMinOfDay } = breakSlotsData;
+  const stdTimeStr = standardEnd ? standardEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
+  const estTimeStr = estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
+
+  if (summary.status === "ON_BREAK") {
+    const activeSlot = slots.find((s) => s.isActiveNow) || slots[0];
+    if (activeSlot.isOver) {
+      return {
+        tone: "danger",
+        title: `${activeSlot.shortName} Exceeded (+${activeSlot.extraMinutes}m)`,
+        headline: `You took ${activeSlot.usedMinutes}m (${activeSlot.extraMinutes}m over the ${activeSlot.allowedMinutes}m allowance).`,
+        recommendation: estTimeStr
+          ? `Workday is extended. Resume work now to keep your finish at ${estTimeStr}.`
+          : `Resume work soon to avoid extending your workday further.`,
+        actionOptions: [
+          estTimeStr ? `Work extended to ${estTimeStr}` : null,
+          activeSlot.id === "morning" ? `Cut Lunch to ${Math.max(0, 30 - activeSlot.extraMinutes)}m to still leave on time` : null,
+          activeSlot.id === "lunch" ? `Cut Evening Break to ${Math.max(0, 15 - activeSlot.extraMinutes)}m to balance it` : null,
+        ].filter(Boolean),
+      };
+    } else {
+      return {
+        tone: "info",
+        title: `Active Break: ${activeSlot.shortName}`,
+        headline: `${activeSlot.usedMinutes}m used (${activeSlot.remainingMinutes}m remaining before overage).`,
+        recommendation: `Resume before ${activeSlot.allowedMinutes}m to keep your target finish of ${stdTimeStr || "on time"}.`,
+        actionOptions: [
+          `Window: ${activeSlot.windowLabel}`,
+          `Allowance: ${activeSlot.allowedMinutes}m max`,
+        ],
+      };
+    }
+  }
+
+  if (totalExtraMinutes === 0) {
+    return {
+      tone: "success",
+      title: "All Breaks Within Allowance",
+      headline: "Great discipline! 0m extra break taken today.",
+      recommendation: stdTimeStr
+        ? `You are on track to complete 8 hours right on time at ${stdTimeStr}.`
+        : "Stay within the 15m/30m/15m planned limits to finish on time.",
+      actionOptions: [
+        "Morning: 15m (11 AM – 1 PM)",
+        "Lunch: 30m (1 PM – 4 PM)",
+        "Evening: 15m (4 PM – 6:30 PM)",
+      ],
+    };
+  }
+
+  if (currentMinOfDay < 780) {
+    const cutLunchTo = Math.max(0, 30 - totalExtraMinutes);
+    return {
+      tone: "danger",
+      title: `Compensate +${totalExtraMinutes}m Break Overage`,
+      headline: `Morning break went ${totalExtraMinutes}m over allowance.`,
+      recommendation: `How to compensate:`,
+      actionOptions: [
+        cutLunchTo > 0
+          ? `Option 1: Shorten Lunch from 30m to ${cutLunchTo}m to still finish at ${stdTimeStr}`
+          : `Option 1: Deduct from upcoming afternoon breaks`,
+        estTimeStr ? `Option 2: Work ${totalExtraMinutes}m extra and finish at ${estTimeStr}` : null,
+      ].filter(Boolean),
+    };
+  }
+
+  if (currentMinOfDay < 960) {
+    const cutEveningTo = Math.max(0, 15 - totalExtraMinutes);
+    return {
+      tone: "danger",
+      title: `Compensate +${totalExtraMinutes}m Extra Break`,
+      headline: `Accumulated +${totalExtraMinutes}m over break allowance.`,
+      recommendation: `How to compensate:`,
+      actionOptions: [
+        totalExtraMinutes <= 15
+          ? `Option 1: Shorten 4:00 PM Evening break from 15m to ${cutEveningTo}m to finish at ${stdTimeStr}`
+          : `Evening break (15m) cannot fully absorb +${totalExtraMinutes}m`,
+        estTimeStr ? `Option 2: Work until ${estTimeStr} (+${totalExtraMinutes}m) to complete 8h` : null,
+      ].filter(Boolean),
+    };
+  }
+
+  return {
+    tone: "danger",
+    title: `Workday Extension Required (+${totalExtraMinutes}m)`,
+    headline: `Total extra breaks taken today: +${totalExtraMinutes}m.`,
+    recommendation: estTimeStr
+      ? `All planned break slots are over. Work until ${estTimeStr} (+${totalExtraMinutes}m) to fulfill your 8-hour requirement.`
+      : `Extend your shift by +${totalExtraMinutes}m to compensate.`,
+    actionOptions: [
+      estTimeStr ? `Compensated finish: ${estTimeStr}` : null,
+      stdTimeStr ? `Standard finish was: ${stdTimeStr}` : null,
+    ].filter(Boolean),
+  };
+}
 
 function todayKey(date = new Date()) {
   const year = date.getFullYear();
@@ -616,17 +838,36 @@ export default function App() {
   const breakOver = Math.max(0, summary.breakSeconds - BREAK_ALLOWANCE_SECONDS);
   const progress = Math.min(100, (summary.workSeconds / TARGET_SECONDS) * 100);
 
-  // Planned finish includes 8h work + at least 1h (60 min) break allowance.
-  // If break exceeded 60 minutes, finish time extends by the extra minutes!
-  const effectiveBreakSeconds = Math.max(BREAK_ALLOWANCE_SECONDS, summary.breakSeconds);
-  const extraBreakSeconds = Math.max(0, summary.breakSeconds - BREAK_ALLOWANCE_SECONDS);
-  const extraBreakMinutes = Math.round(extraBreakSeconds / 60);
+  // 3-Window Break Policy computation: Morning (11-1, 15m), Lunch (1-4, 30m), Evening (4-6:30, 15m)
+  const breakSlotsData = useMemo(() => {
+    return getBreakSlotsData(events, now, summary.status);
+  }, [events, now, summary.status]);
+
+  // Standard finish without any extra breaks (fixed 1h break)
+  const standardEnd = useMemo(() => {
+    if (!summary.firstPunch || summary.status === "COMPLETED") return null;
+    const start = new Date(summary.firstPunch).getTime();
+    return new Date(start + TARGET_SECONDS * 1000 + BREAK_ALLOWANCE_SECONDS * 1000);
+  }, [summary.firstPunch, summary.status]);
+
+  // Total extra break combines slot-specific overages and overall overage
+  const totalExtraBreakMinutes = useMemo(() => {
+    const fromSlots = breakSlotsData.totalExtraMinutes;
+    const fromOverall = Math.ceil(Math.max(0, summary.breakSeconds - BREAK_ALLOWANCE_SECONDS) / 60);
+    return Math.max(fromSlots, fromOverall);
+  }, [breakSlotsData.totalExtraMinutes, summary.breakSeconds]);
+
+  const effectiveBreakSeconds = BREAK_ALLOWANCE_SECONDS + totalExtraBreakMinutes * 60;
 
   const estimatedEnd = useMemo(() => {
     if (!summary.firstPunch || summary.status === "COMPLETED") return null;
     const start = new Date(summary.firstPunch).getTime();
     return new Date(start + TARGET_SECONDS * 1000 + effectiveBreakSeconds * 1000);
   }, [summary.firstPunch, effectiveBreakSeconds, summary.status]);
+
+  const compensationAdvice = useMemo(() => {
+    return generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd);
+  }, [breakSlotsData, summary, standardEnd, estimatedEnd]);
 
   async function login(event) {
     event.preventDefault();
@@ -961,13 +1202,13 @@ export default function App() {
             <span className="small-label">Estimated finish</span>
             <div className="finish-time-row">
               <strong>{estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—"}</strong>
-              {extraBreakMinutes > 0 && (
-                <span className="extra-break-badge">+{extraBreakMinutes}m</span>
+              {totalExtraBreakMinutes > 0 && (
+                <span className="extra-break-badge">+{totalExtraBreakMinutes}m</span>
               )}
             </div>
             <span className="finish-subtext">
-              {extraBreakMinutes > 0 ? (
-                <span className="text-danger">+{extraBreakMinutes}m extra break taken</span>
+              {totalExtraBreakMinutes > 0 ? (
+                <span className="text-danger">+{totalExtraBreakMinutes}m extra break · Work until {estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "end"}</span>
               ) : (
                 <span>Includes 1h planned break</span>
               )}
@@ -985,17 +1226,68 @@ export default function App() {
           <div className="mini-track"><div className={`mini-fill ${breakOver > 0 ? "over" : ""}`} style={{ width: `${Math.min(100, summary.breakSeconds / BREAK_ALLOWANCE_SECONDS * 100)}%` }} /></div>
           {breakOver > 0 && <p className="over-text">{formatDuration(breakOver)} over allowance</p>}
         </article>
-        <article className="metric-card">
-          <div className="metric-icon lunch"><Utensils size={19} /></div>
-          <p className="metric-label">Daily break plan</p>
-          <div className="metric-number">60 <span>min</span></div>
-          <div className="break-breakdown">
-            <span>Break 1 <b>15m</b></span>
-            <span>Lunch <b>30m</b></span>
-            <span>Break 2 <b>15m</b></span>
+        <article className="metric-card break-schedule-card">
+          <div className="metric-head-row">
+            <div className="metric-icon lunch"><Utensils size={19} /></div>
+            <span className="plan-badge-pill">60M TOTAL BUDGET</span>
+          </div>
+          <p className="metric-label">Daily break schedule</p>
+          <div className="break-slots-list">
+            {breakSlotsData.slots.map((slot) => (
+              <div key={slot.id} className={`break-slot-item ${slot.isActiveNow ? "active-now" : ""} ${slot.isOver ? "slot-over" : ""}`}>
+                <div className="slot-row-top">
+                  <span className="slot-title">
+                    <strong>{slot.shortName}</strong>
+                    <small>{slot.windowLabel}</small>
+                  </span>
+                  <div className="slot-badges">
+                    {slot.isOver && (
+                      <span className="slot-over-badge">+{slot.extraMinutes}m</span>
+                    )}
+                    {slot.isActiveNow && (
+                      <span className="slot-active-badge">Active</span>
+                    )}
+                    <span className="slot-used-text">{slot.usedMinutes}m / {slot.allowedMinutes}m</span>
+                  </div>
+                </div>
+                <div className="slot-progress-track">
+                  <div
+                    className={`slot-progress-bar ${slot.isOver ? "over" : ""}`}
+                    style={{ width: `${Math.min(100, (slot.usedMinutes / slot.allowedMinutes) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </article>
       </section>
+
+      {/* Smart Break Compensation Advisor */}
+      {summary.status !== "NOT_STARTED" && (
+        <section className={`compensation-card ${compensationAdvice.tone}`}>
+          <div className="compensation-head">
+            <div className="compensation-icon">
+              {compensationAdvice.tone === "danger" ? <Scale size={18} /> : compensationAdvice.tone === "warning" ? <AlertTriangle size={18} /> : <ShieldCheck size={18} />}
+            </div>
+            <div className="compensation-title-area">
+              <span className="compensation-eyebrow">BREAK COMPENSATION ADVISOR</span>
+              <h3>{compensationAdvice.title}</h3>
+            </div>
+          </div>
+          <p className="compensation-headline">{compensationAdvice.headline}</p>
+          <p className="compensation-recommendation">{compensationAdvice.recommendation}</p>
+          {compensationAdvice.actionOptions && compensationAdvice.actionOptions.length > 0 && (
+            <div className="compensation-actions-list">
+              {compensationAdvice.actionOptions.map((opt, i) => (
+                <div key={i} className="compensation-option-pill">
+                  <span className="option-bullet">✦</span>
+                  <span>{opt}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="actions-section">
         <div className="section-heading">
