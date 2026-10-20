@@ -3,7 +3,7 @@ import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
   Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
-  BarChart3, Radio, CreditCard, Award
+  BarChart3
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -258,90 +258,6 @@ function AirportBoardTimer({ seconds = 0, shuffleKey = 0, onShuffle }) {
   );
 }
 
-function RfidPunchScreen({ onComplete }) {
-  const [step, setStep] = useState(0); // 0: approaching, 1: scanning, 2: authorized, 3: exit
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setStep(1), 500);
-    const t2 = setTimeout(() => setStep(2), 1250);
-    const t3 = setTimeout(() => setStep(3), 1950);
-    const t4 = setTimeout(() => onComplete(), 2250);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-    };
-  }, [onComplete]);
-
-  return (
-    <div className={`rfid-splash-overlay ${step === 3 ? "fade-out" : ""}`}>
-      <button type="button" className="rfid-skip-btn" onClick={onComplete} aria-label="Skip punch-in animation">
-        Skip ↗
-      </button>
-
-      <div className="rfid-terminal-box">
-        {/* Terminal Top Bezel */}
-        <div className="rfid-terminal-header">
-          <div className="rfid-terminal-brand">
-            <span className="rfid-terminal-dot" />
-            <span>SHIFTLY TERMINAL // RFID-2026</span>
-          </div>
-          <span className="rfid-terminal-mode">NFC READY</span>
-        </div>
-
-        {/* Contactless Sensor Pad */}
-        <div className="rfid-sensor-pad">
-          <div className={`rfid-wave-ring ${step >= 1 ? "pulse" : ""}`} />
-          <div className={`rfid-wave-ring r2 ${step >= 1 ? "pulse" : ""}`} />
-          <div className={`rfid-wave-ring r3 ${step >= 1 ? "pulse" : ""}`} />
-          <div className="rfid-pad-center">
-            <Radio size={28} />
-          </div>
-          <span className="rfid-pad-text">HOLD CARD TO SENSOR</span>
-        </div>
-
-        {/* The Shiftly RFID Smart Card Badge */}
-        <div className={`rfid-card-entity ${step >= 1 ? "docked" : "floating"} ${step >= 2 ? "verified" : ""}`}>
-          <div className="rfid-card-top">
-            <span className="rfid-card-logo">
-              <img src="/favicon.png" alt="Shiftly logo" className="rfid-icon-img" /> SHIFT<span>LY</span>
-            </span>
-            <span className="rfid-chip-hardware">
-              <span className="chip-grid" />
-            </span>
-          </div>
-          <div className="rfid-card-body">
-            <div className="rfid-badge-avatar">
-              <span className="avatar-silhouette">👤</span>
-            </div>
-            <div className="rfid-badge-meta">
-              <strong>DAILY SHIFT PASS</strong>
-              <small>ID: SHF-2026-948</small>
-              <span className="rfid-badge-pill">
-                {step >= 2 ? "AUTHORIZED" : "NFC CONTACTLESS"}
-              </span>
-            </div>
-          </div>
-          <div className="rfid-card-footer">
-            <span className="rfid-nfc-symbol">(( · )) RFID</span>
-            <span className="rfid-footer-tag">BIOMETRIC PUNCH</span>
-          </div>
-        </div>
-
-        {/* Interactive Laser Scanning Line */}
-        <div className={`rfid-scanner-laser ${step === 1 ? "active" : ""}`} />
-
-        {/* Live Terminal Telemetry readout */}
-        <div className={`rfid-status-badge ${step >= 2 ? "success" : step === 1 ? "scanning" : ""}`}>
-          {step === 0 && <span>APPROACHING RFID SENSOR…</span>}
-          {step === 1 && <span>READING NFC CHIP // VERIFYING ATTENDANCE…</span>}
-          {step >= 2 && <span>✓ CHECK-IN AUTHORIZED // SHIFT STARTED</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
   const [selectedDay, setSelectedDay] = useState(null);
@@ -542,7 +458,6 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [connected, setConnected] = useState(false);
   const [shuffleKey, setShuffleKey] = useState(0);
-  const [showRfidIntro, setShowRfidIntro] = useState(true);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("shiftly_theme") || "light";
   });
@@ -875,7 +790,6 @@ export default function App() {
   if (!authenticated || !accessCode) {
     return (
       <main className="shell auth-shell">
-        {showRfidIntro && <RfidPunchScreen onComplete={() => setShowRfidIntro(false)} />}
         <header className="topbar">
           <a className="brand" href="/" aria-label="Shiftly home">
             <span className="brand-mark"><img src="/favicon.png" alt="Shiftly logo" className="brand-logo-img" /></span>
@@ -883,15 +797,6 @@ export default function App() {
             <span className="brand-pill">NEO</span>
           </a>
           <div className="topbar-right">
-            <button
-              type="button"
-              className="theme-toggle-btn rfid-btn"
-              onClick={() => setShowRfidIntro(true)}
-              title="Replay Shiftly RFID Punch-in animation"
-            >
-              <Radio size={14} />
-              <span>RFID</span>
-            </button>
             <button
               type="button"
               className="theme-toggle-btn"
@@ -924,7 +829,6 @@ export default function App() {
 
   return (
     <main className="shell">
-      {showRfidIntro && <RfidPunchScreen onComplete={() => setShowRfidIntro(false)} />}
       <header className="topbar">
         <a className="brand" href="/" aria-label="Shiftly home">
           <span className="brand-mark"><img src="/favicon.png" alt="Shiftly logo" className="brand-logo-img" /></span>
@@ -932,15 +836,6 @@ export default function App() {
           <span className="brand-pill">NEO</span>
         </a>
         <div className="topbar-right">
-          <button
-            type="button"
-            className="theme-toggle-btn rfid-btn"
-            onClick={() => setShowRfidIntro(true)}
-            title="Replay Shiftly RFID Punch-in animation"
-          >
-            <Radio size={14} />
-            <span>RFID</span>
-          </button>
           <button
             type="button"
             className="theme-toggle-btn"
