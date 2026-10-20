@@ -1145,7 +1145,12 @@ export default function App() {
           </form>
           <p className="helper-note">Set APP_ACCESS_CODE in your Vercel environment variables before using the deployed app.</p>
         </section>
-        <footer><span>Shiftly · Neo-Brutalist Attendance</span><span>Private access</span></footer>
+        <footer>
+          <span>Shiftly <span className="footer-dot">·</span> Neo-Brutalist Attendance</span>
+          <span className="creator-badge">
+            <span className="creator-spark">⚡</span> Made with care by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
+          </span>
+        </footer>
       </main>
     );
   }
@@ -1545,8 +1550,13 @@ export default function App() {
       <ShiftAnalyticsDashboard history={history} currentSeconds={summary.workSeconds} />
 
       <footer>
-        <span>Shiftly <span className="footer-dot">·</span> Smart Workday Tracker</span>
-        <span>8h target <span className="footer-dot">·</span> 1h break allowance</span>
+        <div className="footer-info">
+          <span>Shiftly <span className="footer-dot">·</span> Smart Workday Tracker</span>
+          <span className="footer-stats">8h target <span className="footer-dot">·</span> 1h break allowance</span>
+        </div>
+        <span className="creator-badge">
+          <span className="creator-spark">⚡</span> Made with passion by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
+        </span>
       </footer>
     </main>
   );
