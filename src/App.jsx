@@ -178,30 +178,26 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
   // Active break mode advice
   if (summary.status === "ON_BREAK") {
     const activeSlot = slots.find((s) => s.isActiveNow) || slots[0];
-    if (activeSlot.isOver) {
+    if (activeSlot.isOver || totalExtraMinutes > 0) {
+      // Find candidate upcoming slots strictly after the active slot that are untouched and not past
+      const activeIdx = slots.findIndex((s) => s.id === activeSlot.id);
+      const remainingSlots = slots.slice(activeIdx + 1).filter((s) => {
+        const isUntouched = (s.usedSeconds === 0 || !s.usedSeconds) && (s.breaksCount === 0 || !s.breaksCount) && !s.isActiveNow;
+        return isUntouched && !s.isPast;
+      });
+      const nextSlot = remainingSlots[0] || null;
+
       let preset = null;
-      if (activeSlot.id === "morning") {
-        const cutLunchTo = Math.max(0, 30 - activeSlot.extraMinutes);
-        if (cutLunchTo > 0) {
+      if (nextSlot) {
+        const cutTo = Math.max(0, nextSlot.allowedMinutes - totalExtraMinutes);
+        if (cutTo > 0) {
           preset = {
-            slotId: "lunch",
-            slotName: "Lunch Break",
-            deductMinutes: activeSlot.extraMinutes,
-            originalAllowedMinutes: 30,
-            targetMinutes: cutLunchTo,
-            description: `Shorten Lunch from 30m to ${cutLunchTo}m to still leave on time`
-          };
-        }
-      } else if (activeSlot.id === "lunch") {
-        const cutEveningTo = Math.max(0, 15 - activeSlot.extraMinutes);
-        if (cutEveningTo > 0) {
-          preset = {
-            slotId: "evening",
-            slotName: "Evening Break",
-            deductMinutes: activeSlot.extraMinutes,
-            originalAllowedMinutes: 15,
-            targetMinutes: cutEveningTo,
-            description: `Shorten Evening Break from 15m to ${cutEveningTo}m to balance it`
+            slotId: nextSlot.id,
+            slotName: nextSlot.name,
+            deductMinutes: totalExtraMinutes,
+            originalAllowedMinutes: nextSlot.allowedMinutes,
+            targetMinutes: cutTo,
+            description: `Shorten ${nextSlot.shortName} from ${nextSlot.allowedMinutes}m to ${cutTo}m to balance it`
           };
         }
       }
@@ -243,23 +239,30 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
 
   // If compensation preset is currently active for today
   if (appliedCompensation && appliedCompensation.date === todayKey()) {
-    return {
-      tone: "success",
-      title: "⚡ Compensation Preset Active",
-      headline: `${appliedCompensation.slotName} budget adjusted to ${appliedCompensation.targetMinutes}m (-${appliedCompensation.deductMinutes}m compensated).`,
-      recommendation: stdTimeStr
-        ? `Live progress bar targets your standard on-time finish at ${stdTimeStr}!`
-        : `Your progress bar is targeting the compensated finish time.`,
-      preset: null,
-      isApplied: true,
-      actionOptions: [
-        {
-          id: "applied-status",
-          text: `Applied: ${appliedCompensation.slotName} set to ${appliedCompensation.targetMinutes}m (was ${appliedCompensation.originalAllowedMinutes}m)`
-        },
-        stdTimeStr ? { id: "finish-status", text: `Standard finish preserved: ${stdTimeStr}` } : null,
-      ].filter(Boolean),
-    };
+    const compensatedSlot = slots.find((s) => s.id === appliedCompensation.slotId);
+    const hasCompensatedSlotPassedOrUsed = compensatedSlot && (compensatedSlot.usedSeconds > 0 || compensatedSlot.isPast);
+    const netExtra = Math.max(0, totalExtraMinutes - (appliedCompensation.deductMinutes || 0));
+
+    // Show active confirmation if no net extra remains or if the compensated slot is still pending
+    if (netExtra === 0 || !hasCompensatedSlotPassedOrUsed) {
+      return {
+        tone: "success",
+        title: "⚡ Compensation Preset Active",
+        headline: `${appliedCompensation.slotName} budget adjusted to ${appliedCompensation.targetMinutes}m (-${appliedCompensation.deductMinutes}m compensated).`,
+        recommendation: stdTimeStr
+          ? `Live progress bar targets your standard on-time finish at ${stdTimeStr}!`
+          : `Your progress bar is targeting the compensated finish time.`,
+        preset: null,
+        isApplied: true,
+        actionOptions: [
+          {
+            id: "applied-status",
+            text: `Applied: ${appliedCompensation.slotName} set to ${appliedCompensation.targetMinutes}m (was ${appliedCompensation.originalAllowedMinutes}m)`
+          },
+          stdTimeStr ? { id: "finish-status", text: `Standard finish preserved: ${stdTimeStr}` } : null,
+        ].filter(Boolean),
+      };
+    }
   }
 
   // 0m extra break - perfect discipline
@@ -280,32 +283,52 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
     };
   }
 
-  // Morning overage -> Can compensate by shortening Lunch
-  if (currentMinOfDay < 780 || (currentMinOfDay < 960 && totalExtraMinutes <= 30)) {
-    const cutLunchTo = Math.max(0, 30 - totalExtraMinutes);
-    const preset = cutLunchTo > 0 ? {
-      slotId: "lunch",
-      slotName: "Lunch Break",
+  // Dynamic overage headline accurately identifying which break(s) exceeded allowance
+  const overSlots = slots.filter((s) => s.isOver || s.extraMinutes > 0);
+  let overageHeadline = "";
+  if (overSlots.length === 1) {
+    overageHeadline = `${overSlots[0].name} went ${overSlots[0].extraMinutes}m over allowance.`;
+  } else if (overSlots.length > 1) {
+    const parts = overSlots.map((s) => `${s.shortName} (+${s.extraMinutes}m)`);
+    overageHeadline = `${parts.join(" and ")} exceeded allowances by +${totalExtraMinutes}m total.`;
+  } else {
+    overageHeadline = `Total break time went +${totalExtraMinutes}m over planned allowance.`;
+  }
+
+  // Find candidate future break slots that are UNTOUCHED (0 used time, 0 breaks count, not active) and NOT in the past
+  const candidateSlots = slots.filter((s) => {
+    const isUntouched = (s.usedSeconds === 0 || !s.usedSeconds) && (s.breaksCount === 0 || !s.breaksCount) && !s.isActiveNow;
+    return isUntouched && !s.isPast;
+  });
+
+  const nextSlot = candidateSlots[0] || null;
+
+  if (nextSlot) {
+    const cutTo = Math.max(0, nextSlot.allowedMinutes - totalExtraMinutes);
+    const canFullyAbsorb = cutTo > 0;
+    const preset = canFullyAbsorb ? {
+      slotId: nextSlot.id,
+      slotName: nextSlot.name,
       deductMinutes: totalExtraMinutes,
-      originalAllowedMinutes: 30,
-      targetMinutes: cutLunchTo,
-      description: `Shorten Lunch from 30m to ${cutLunchTo}m to still finish at ${stdTimeStr}`
+      originalAllowedMinutes: nextSlot.allowedMinutes,
+      targetMinutes: cutTo,
+      description: `Shorten ${nextSlot.shortName} from ${nextSlot.allowedMinutes}m to ${cutTo}m to still finish at ${stdTimeStr}`
     } : null;
 
     return {
       tone: "danger",
       title: `Compensate +${totalExtraMinutes}m Break Overage`,
-      headline: `Morning break went ${totalExtraMinutes}m over allowance.`,
+      headline: overageHeadline,
       recommendation: `How to compensate:`,
       preset,
       actionOptions: [
         preset ? {
-          id: "preset-lunch",
-          text: `Option 1: Shorten Lunch from 30m to ${cutLunchTo}m to still finish at ${stdTimeStr}`,
+          id: `preset-${nextSlot.id}`,
+          text: `Option 1: Shorten ${nextSlot.shortName} from ${nextSlot.allowedMinutes}m to ${cutTo}m to still finish at ${stdTimeStr}`,
           preset
         } : {
-          id: "deduct-lunch",
-          text: `Option 1: Deduct from upcoming afternoon breaks`
+          id: `cannot-absorb-${nextSlot.id}`,
+          text: `Option 1: ${nextSlot.shortName} break (${nextSlot.allowedMinutes}m) cannot fully absorb +${totalExtraMinutes}m overage`
         },
         estTimeStr ? {
           id: "extend-work",
@@ -315,51 +338,17 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
     };
   }
 
-  // Afternoon / Lunch overage -> Can compensate by shortening Evening Break
-  if (currentMinOfDay < 1110) { // before 6:30 PM
-    const cutEveningTo = Math.max(0, 15 - totalExtraMinutes);
-    const preset = totalExtraMinutes <= 15 && cutEveningTo > 0 ? {
-      slotId: "evening",
-      slotName: "Evening Break",
-      deductMinutes: totalExtraMinutes,
-      originalAllowedMinutes: 15,
-      targetMinutes: cutEveningTo,
-      description: `Shorten 4:00 PM Evening break from 15m to ${cutEveningTo}m to finish at ${stdTimeStr}`
-    } : null;
-
-    return {
-      tone: "danger",
-      title: `Compensate +${totalExtraMinutes}m Extra Break`,
-      headline: `Accumulated +${totalExtraMinutes}m over break allowance.`,
-      recommendation: `How to compensate:`,
-      preset,
-      actionOptions: [
-        preset ? {
-          id: "preset-evening",
-          text: `Option 1: Shorten 4:00 PM Evening break from 15m to ${cutEveningTo}m to finish at ${stdTimeStr}`,
-          preset
-        } : {
-          id: "cannot-absorb",
-          text: `Evening break (15m) cannot fully absorb +${totalExtraMinutes}m`
-        },
-        estTimeStr ? {
-          id: "extend-work",
-          text: `Option 2: Work until ${estTimeStr} (+${totalExtraMinutes}m) to complete 8h`
-        } : null,
-      ].filter(Boolean),
-    };
-  }
-
+  // All planned break slots are over or completed
   return {
     tone: "danger",
     title: `Workday Extension Required (+${totalExtraMinutes}m)`,
-    headline: `Total extra breaks taken today: +${totalExtraMinutes}m.`,
+    headline: overageHeadline,
     recommendation: estTimeStr
-      ? `All planned break slots are over. Work until ${estTimeStr} (+${totalExtraMinutes}m) to fulfill your 8-hour requirement.`
+      ? `All planned break slots are completed. Work until ${estTimeStr} (+${totalExtraMinutes}m) to fulfill your 8-hour requirement.`
       : `Extend your shift by +${totalExtraMinutes}m to compensate.`,
     preset: null,
     actionOptions: [
-      estTimeStr ? { id: "finish-est", text: `Compensated finish: ${estTimeStr}` } : null,
+      estTimeStr ? { id: "finish-est", text: `Option: Work extended to finish at ${estTimeStr}` } : null,
       stdTimeStr ? { id: "finish-std", text: `Standard finish was: ${stdTimeStr}` } : null,
     ].filter(Boolean),
   };
