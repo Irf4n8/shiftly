@@ -851,7 +851,7 @@ function ShiftlyBootLoader({ targetRef, onFinish }) {
           <div className="boot-charge-bar" />
         </div>
         <span className="boot-crafted-by">
-          <span className="boot-crafted-spark">⚡</span> Crafted by <strong>Irf4n</strong>
+          <span className="boot-crafted-spark">✨</span> Crafted by <strong>Irf4n</strong>
         </span>
       </div>
     </div>
@@ -2052,7 +2052,7 @@ export default function App() {
         <footer>
           <span>Shiftly <span className="footer-dot">·</span> Neo-Brutalist Attendance</span>
           <span className="creator-badge">
-            <span className="creator-spark">⚡</span> Made with care by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
+            <span className="creator-spark">✨</span> Made with care by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
           </span>
         </footer>
       </main>
@@ -2701,7 +2701,7 @@ export default function App() {
           <span className="footer-stats">8h target <span className="footer-dot">·</span> 1h break allowance</span>
         </div>
         <span className="creator-badge">
-          <span className="creator-spark">⚡</span> Made with passion by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
+          <span className="creator-spark">✨</span> Made with passion by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
         </span>
       </footer>
     </main>
