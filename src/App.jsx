@@ -591,6 +591,164 @@ function ShiftlyBootLoader({ targetRef, onFinish }) {
   );
 }
 
+function TimeSwipePicker({ timeStr, onChange, idPrefix = "time-swipe" }) {
+  const [hourStr, minStr] = (timeStr || getLocalTimeString()).split(":");
+  const hour = Math.max(0, Math.min(23, parseInt(hourStr, 10) || 0));
+  const min = Math.max(0, Math.min(59, parseInt(minStr, 10) || 0));
+
+  const setHour = (newHour) => {
+    const clamped = Math.max(0, Math.min(23, newHour));
+    const h = String(clamped).padStart(2, "0");
+    const m = String(min).padStart(2, "0");
+    onChange(`${h}:${m}`);
+  };
+
+  const setMinute = (newMin) => {
+    const clamped = Math.max(0, Math.min(59, newMin));
+    const h = String(hour).padStart(2, "0");
+    const m = String(clamped).padStart(2, "0");
+    onChange(`${h}:${m}`);
+  };
+
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 || 12;
+  const hourLabel = `${h12}:00 ${ampm}`;
+  const minuteLabel = `${String(min).padStart(2, "0")}m`;
+
+  const hourProgress = (hour / 23) * 100;
+  const minProgress = (min / 59) * 100;
+
+  return (
+    <div className="time-swipe-picker">
+      {/* 1. Hours Swipe Row */}
+      <div className="swipe-slider-card hour-card">
+        <div className="swipe-slider-header">
+          <div className="swipe-slider-meta">
+            <span className="swipe-slider-icon hour-icon">
+              <Clock size={15} />
+            </span>
+            <div className="swipe-slider-text">
+              <strong>Hours</strong>
+              <small>00 – 23</small>
+            </div>
+          </div>
+          <div className="swipe-value-badge hour-badge">
+            <span className="swipe-badge-prefix">Hour:</span>
+            <strong>{hourLabel}</strong>
+          </div>
+        </div>
+
+        <div className="swipe-track-container">
+          <button
+            type="button"
+            className="swipe-nudge-btn"
+            onClick={() => setHour(hour - 1)}
+            disabled={hour <= 0}
+            aria-label="Decrease hour"
+          >
+            −
+          </button>
+          <div className="swipe-track-wrapper">
+            <input
+              id={`${idPrefix}-hours`}
+              type="range"
+              min={0}
+              max={23}
+              step={1}
+              value={hour}
+              onChange={(e) => setHour(Number(e.target.value))}
+              className="swipe-range hour-range"
+              style={{ '--swipe-progress': `${hourProgress}%` }}
+              aria-label="Hours slider"
+            />
+          </div>
+          <button
+            type="button"
+            className="swipe-nudge-btn"
+            onClick={() => setHour(hour + 1)}
+            disabled={hour >= 23}
+            aria-label="Increase hour"
+          >
+            +
+          </button>
+        </div>
+
+        <div className="swipe-markers">
+          <span onClick={() => setHour(0)}>12 AM</span>
+          <span onClick={() => setHour(6)}>6 AM</span>
+          <span onClick={() => setHour(9)}>9 AM</span>
+          <span onClick={() => setHour(12)}>12 PM</span>
+          <span onClick={() => setHour(15)}>3 PM</span>
+          <span onClick={() => setHour(18)}>6 PM</span>
+          <span onClick={() => setHour(23)}>11 PM</span>
+        </div>
+      </div>
+
+      {/* 2. Minutes Swipe Row */}
+      <div className="swipe-slider-card minute-card">
+        <div className="swipe-slider-header">
+          <div className="swipe-slider-meta">
+            <span className="swipe-slider-icon minute-icon">
+              <Timer size={15} />
+            </span>
+            <div className="swipe-slider-text">
+              <strong>Minutes</strong>
+              <small>00 – 59</small>
+            </div>
+          </div>
+          <div className="swipe-value-badge minute-badge">
+            <span className="swipe-badge-prefix">Min:</span>
+            <strong>{minuteLabel}</strong>
+          </div>
+        </div>
+
+        <div className="swipe-track-container">
+          <button
+            type="button"
+            className="swipe-nudge-btn"
+            onClick={() => setMinute(min - 1)}
+            disabled={min <= 0}
+            aria-label="Decrease minute"
+          >
+            −
+          </button>
+          <div className="swipe-track-wrapper">
+            <input
+              id={`${idPrefix}-minutes`}
+              type="range"
+              min={0}
+              max={59}
+              step={1}
+              value={min}
+              onChange={(e) => setMinute(Number(e.target.value))}
+              className="swipe-range minute-range"
+              style={{ '--swipe-progress': `${minProgress}%` }}
+              aria-label="Minutes slider"
+            />
+          </div>
+          <button
+            type="button"
+            className="swipe-nudge-btn"
+            onClick={() => setMinute(min + 1)}
+            disabled={min >= 59}
+            aria-label="Increase minute"
+          >
+            +
+          </button>
+        </div>
+
+        <div className="swipe-markers">
+          <span onClick={() => setMinute(0)}>:00</span>
+          <span onClick={() => setMinute(15)}>:15</span>
+          <span onClick={() => setMinute(30)}>:30</span>
+          <span onClick={() => setMinute(45)}>:45</span>
+          <span onClick={() => setMinute(59)}>:59</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0 }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -1655,15 +1813,10 @@ export default function App() {
 
           {isCustomTimeOpen && (
             <div className="custom-time-box">
-              <div className="custom-time-row">
-                <label htmlFor="custom-punch-time">Set exact punch time:</label>
-                <input
-                  id="custom-punch-time"
-                  type="time"
-                  className="time-input"
-                  value={customTime}
-                  onChange={(e) => setCustomTime(e.target.value)}
-                />
+              <div className="custom-time-header">
+                <div className="custom-time-clock-display">
+                  <span className="custom-time-clock-badge">{formatClock(timeStringToIso(customTime))}</span>
+                </div>
                 <div className="chip-group">
                   <button type="button" className="chip-btn" onClick={() => setCustomTime(getLocalTimeString())}>Now</button>
                   <button type="button" className="chip-btn" onClick={() => setCustomTime(applyOffsetToTime(customTime, -15))}>-15m</button>
@@ -1673,6 +1826,13 @@ export default function App() {
                   <button type="button" className="chip-btn" onClick={() => setCustomTime(applyOffsetToTime(customTime, -120))}>-2h</button>
                 </div>
               </div>
+
+              <TimeSwipePicker
+                timeStr={customTime}
+                onChange={setCustomTime}
+                idPrefix="custom-punch"
+              />
+
               <div className="custom-time-preview">
                 Your next punch above will be recorded as: <strong>{formatClock(timeStringToIso(customTime))} today</strong>.
               </div>
@@ -1737,15 +1897,13 @@ export default function App() {
                 Adjusting timestamp for <strong>{ACTION_LABELS[editingEvent.action] || editingEvent.action}</strong>.
               </p>
               <div className="modal-field">
-                <label htmlFor="edit-punch-time">
-                  Corrected punch time: {editTimeInput && <span className="time-12h-tag">{formatClock(timeStringToIso(editTimeInput))}</span>}
+                <label>
+                  Corrected punch time: <span className="time-12h-tag">{formatClock(timeStringToIso(editTimeInput))}</span>
                 </label>
-                <input
-                  id="edit-punch-time"
-                  type="time"
-                  className="time-input"
-                  value={editTimeInput}
-                  onChange={(e) => setEditTimeInput(e.target.value)}
+                <TimeSwipePicker
+                  timeStr={editTimeInput}
+                  onChange={setEditTimeInput}
+                  idPrefix="edit-punch"
                 />
               </div>
               <div className="chip-group">
@@ -1791,15 +1949,13 @@ export default function App() {
                 </select>
               </div>
               <div className="modal-field">
-                <label htmlFor="manual-time">
-                  Punch Time: {manualTimeInput && <span className="time-12h-tag">{formatClock(timeStringToIso(manualTimeInput))}</span>}
+                <label>
+                  Punch Time: <span className="time-12h-tag">{formatClock(timeStringToIso(manualTimeInput))}</span>
                 </label>
-                <input
-                  id="manual-time"
-                  type="time"
-                  className="time-input"
-                  value={manualTimeInput}
-                  onChange={(e) => setManualTimeInput(e.target.value)}
+                <TimeSwipePicker
+                  timeStr={manualTimeInput}
+                  onChange={setManualTimeInput}
+                  idPrefix="manual-modal"
                 />
               </div>
               <div className="chip-group">

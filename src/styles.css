@@ -1564,6 +1564,365 @@ h2 {
   gap: 12px;
 }
 
+/* Custom Time Row & Header */
+.custom-time-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.custom-time-clock-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-time-clock-badge {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-main);
+  background: var(--surface-alt);
+  border: var(--border-width) solid var(--border);
+  padding: 4px 10px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-xs);
+}
+
+[data-theme="dark"] .custom-time-clock-badge {
+  background: #1B1B1B;
+  color: #FFD84D;
+  border-color: #3E3E3E;
+  box-shadow: 2px 2px 0 #000000;
+}
+
+/* =========================================================================
+   Time Swipe Slider Picker (Hours & Minutes)
+   ========================================================================= */
+.time-swipe-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.swipe-slider-card {
+  background: var(--surface-alt);
+  border: var(--border-width) solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+
+[data-theme="dark"] .swipe-slider-card {
+  background: #202020;
+  border-color: #383838;
+  box-shadow: 2px 2px 0 #000000;
+}
+
+.swipe-slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.swipe-slider-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.swipe-slider-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  box-shadow: 1px 1px 0 var(--border);
+}
+
+.swipe-slider-icon.hour-icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.swipe-slider-icon.minute-icon {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+[data-theme="dark"] .swipe-slider-icon.hour-icon {
+  background: #172545;
+  color: #5B7CFF;
+  border-color: #2D4174;
+}
+
+[data-theme="dark"] .swipe-slider-icon.minute-icon {
+  background: #2D230C;
+  color: #FFD84D;
+  border-color: #544114;
+}
+
+.swipe-slider-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.swipe-slider-text strong {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.swipe-slider-text small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.swipe-value-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  box-shadow: 1px 1px 0 var(--border);
+  white-space: nowrap;
+}
+
+.swipe-value-badge.hour-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.swipe-value-badge.minute-badge {
+  background: #fefce8;
+  color: #a16207;
+}
+
+[data-theme="dark"] .swipe-value-badge.hour-badge {
+  background: #131E33;
+  color: #5B7CFF;
+  border-color: #2D4174;
+}
+
+[data-theme="dark"] .swipe-value-badge.minute-badge {
+  background: #251D0B;
+  color: #FFD84D;
+  border-color: #544114;
+}
+
+.swipe-badge-prefix {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.swipe-track-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.swipe-nudge-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 1px 1px 0 var(--border);
+  flex-shrink: 0;
+  transition: transform .1s ease, box-shadow .1s ease;
+  user-select: none;
+}
+
+.swipe-nudge-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--border);
+  background: var(--surface-highlight);
+}
+
+.swipe-nudge-btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 transparent;
+}
+
+.swipe-nudge-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .swipe-nudge-btn {
+  background: #282828;
+  border-color: #3E3E3E;
+  color: #F5F1E8;
+  box-shadow: 1px 1px 0 #000000;
+}
+
+[data-theme="dark"] .swipe-nudge-btn:hover:not(:disabled) {
+  background: #333333;
+  border-color: #5B7CFF;
+}
+
+.swipe-track-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.swipe-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 32px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  margin: 0;
+}
+
+.swipe-range.hour-range {
+  --fill-color: #2563eb;
+  --thumb-color: #2563eb;
+  --track-bg: #e2e8f0;
+}
+
+.swipe-range.minute-range {
+  --fill-color: #eab308;
+  --thumb-color: #eab308;
+  --track-bg: #e2e8f0;
+}
+
+[data-theme="dark"] .swipe-range.hour-range {
+  --fill-color: #5B7CFF;
+  --thumb-color: #5B7CFF;
+  --track-bg: #151515;
+}
+
+[data-theme="dark"] .swipe-range.minute-range {
+  --fill-color: #FFD84D;
+  --thumb-color: #FFD84D;
+  --track-bg: #151515;
+}
+
+/* Chrome / Safari / Edge Range Track */
+.swipe-range::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--fill-color) 0%,
+    var(--fill-color) var(--swipe-progress, 0%),
+    var(--track-bg) var(--swipe-progress, 0%),
+    var(--track-bg) 100%
+  );
+  border: 1.5px solid var(--border);
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Chrome / Safari / Edge Range Thumb */
+.swipe-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--thumb-color);
+  border: 2.5px solid var(--border);
+  box-shadow: 2px 2px 0 var(--border);
+  margin-top: -8.5px;
+  cursor: grab;
+  transition: transform .12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow .12s ease;
+}
+
+.swipe-range:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.18);
+  box-shadow: 3px 3px 0 var(--border);
+}
+
+/* Firefox Range Track */
+.swipe-range::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--fill-color) 0%,
+    var(--fill-color) var(--swipe-progress, 0%),
+    var(--track-bg) var(--swipe-progress, 0%),
+    var(--track-bg) 100%
+  );
+  border: 1.5px solid var(--border);
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Firefox Range Thumb */
+.swipe-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--thumb-color);
+  border: 2.5px solid var(--border);
+  box-shadow: 2px 2px 0 var(--border);
+  cursor: grab;
+  transition: transform .12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow .12s ease;
+}
+
+.swipe-range:active::-moz-range-thumb {
+  cursor: grabbing;
+  transform: scale(1.18);
+  box-shadow: 3px 3px 0 var(--border);
+}
+
+.swipe-markers {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 0 4px;
+}
+
+.swipe-markers span {
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color .1s ease;
+}
+
+.swipe-markers span:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
 .custom-time-row {
   display: flex;
   align-items: center;
