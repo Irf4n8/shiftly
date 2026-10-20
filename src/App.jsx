@@ -167,10 +167,39 @@ export default function App() {
   }, [accessCode]);
 
   useEffect(() => {
-    if (authenticated && accessCode) refresh();
-    else setLoading(false);
-    const clock = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(clock);
+    if (authenticated && accessCode) {
+      refresh();
+
+      // 1. Live second ticking timer
+      const clock = window.setInterval(() => setNow(Date.now()), 1000);
+
+      // 2. Real-time background sync every 10 seconds so mobile & laptop stay synchronized
+      const pollTimer = window.setInterval(() => {
+        refresh(true); // silent background fetch
+      }, 10000);
+
+      // 3. Instant sync whenever switching back to tab, window, or unlocking device
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          refresh(true);
+        }
+      };
+      const handleFocus = () => {
+        refresh(true);
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener("focus", handleFocus);
+
+      return () => {
+        window.clearInterval(clock);
+        window.clearInterval(pollTimer);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        window.removeEventListener("focus", handleFocus);
+      };
+    } else {
+      setLoading(false);
+    }
   }, [refresh, authenticated, accessCode]);
 
   const summary = useMemo(() => summarize(events, now), [events, now]);
@@ -228,9 +257,23 @@ export default function App() {
   }
 
   async function punch(action, customTimestamp = null) {
+    // Instant Optimistic Update (0ms latency feel)
+    const eventTimeIso = customTimestamp || new Date().toISOString();
+    const tempSessionId = "temp-" + Date.now();
+    const optimisticEvent = {
+      action,
+      timestamp: eventTimeIso,
+      date: todayKey(new Date(eventTimeIso)),
+      sessionId: tempSessionId
+    };
+    const prevEvents = [...events];
+    setEvents(prev => [...prev, optimisticEvent].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+    setNotice(ACTION_LABELS[action] || "Saved.");
+    setIsCustomTimeOpen(false);
+    setCustomTime(getLocalTimeString());
+
     setBusy(true);
     setError("");
-    setNotice("");
     try {
       const body = { action, accessCode };
       if (customTimestamp) {
@@ -247,9 +290,9 @@ export default function App() {
       setHistory(data.history || []);
       setConnected(true);
       setNotice(data.message || ACTION_LABELS[action] || "Saved.");
-      setIsCustomTimeOpen(false);
-      setCustomTime(getLocalTimeString());
     } catch (e) {
+      // Revert optimistic update if request fails
+      setEvents(prevEvents);
       setError(e.message || "Could not save this punch.");
     } finally {
       setBusy(false);
@@ -263,11 +306,22 @@ export default function App() {
 
   async function saveEditPunch() {
     if (!editingEvent || !editTimeInput) return;
+    const newIso = timeStringToIso(editTimeInput, editingEvent.timestamp);
+    const prevEvents = [...events];
+
+    // Optimistic update
+    setEvents(prev => prev.map(ev => {
+      if ((editingEvent.sessionId && ev.sessionId === editingEvent.sessionId) || ev.timestamp === editingEvent.timestamp) {
+        return { ...ev, timestamp: newIso, date: todayKey(new Date(newIso)) };
+      }
+      return ev;
+    }).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+
+    setEditingEvent(null);
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      const newIso = timeStringToIso(editTimeInput, editingEvent.timestamp);
       const response = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -285,8 +339,8 @@ export default function App() {
       setHistory(data.history || []);
       setConnected(true);
       setNotice("Punch time updated.");
-      setEditingEvent(null);
     } catch (e) {
+      setEvents(prevEvents);
       setError(e.message || "Could not update punch time.");
     } finally {
       setBusy(false);
@@ -299,6 +353,14 @@ export default function App() {
     if (!window.confirm(`Are you sure you want to remove this punch?\n\n${actionName} at ${timeFormatted}`)) {
       return;
     }
+
+    const prevEvents = [...events];
+    // Optimistic delete
+    setEvents(prev => prev.filter(ev => {
+      if (eventToDelete.sessionId && ev.sessionId === eventToDelete.sessionId) return false;
+      return ev.timestamp !== eventToDelete.timestamp;
+    }));
+
     setBusy(true);
     setError("");
     setNotice("");
@@ -320,6 +382,7 @@ export default function App() {
       setConnected(true);
       setNotice("Punch removed.");
     } catch (e) {
+      setEvents(prevEvents);
       setError(e.message || "Could not delete punch.");
     } finally {
       setBusy(false);
@@ -328,11 +391,24 @@ export default function App() {
 
   async function addManualPunch() {
     if (!manualTimeInput) return;
+    const newIso = timeStringToIso(manualTimeInput);
+    const prevEvents = [...events];
+
+    // Optimistic insert
+    const tempSessionId = "manual-" + Date.now();
+    const optimisticEvent = {
+      action: manualActionInput,
+      timestamp: newIso,
+      date: todayKey(new Date(newIso)),
+      sessionId: tempSessionId
+    };
+    setEvents(prev => [...prev, optimisticEvent].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+    setIsAddModalOpen(false);
+
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      const newIso = timeStringToIso(manualTimeInput);
       const response = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -349,8 +425,8 @@ export default function App() {
       setHistory(data.history || []);
       setConnected(true);
       setNotice("Missed punch added successfully.");
-      setIsAddModalOpen(false);
     } catch (e) {
+      setEvents(prevEvents);
       setError(e.message || "Could not add missed punch.");
     } finally {
       setBusy(false);

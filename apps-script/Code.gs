@@ -1,12 +1,10 @@
 /**
  * OfficeTime Google Apps Script backend.
  *
- * Supports:
- * - Real-time punches (START_WORK, START_BREAK, RESUME_WORK, END_DAY)
- * - Custom punch-in timestamp (when you forget to punch in earlier)
- * - Editing existing punch timestamps (EDIT_EVENT)
- * - Deleting mistaken punches (DELETE_EVENT)
- * - Automatic recalculation of Daily Summary and work/break times
+ * Performance-optimized:
+ * - Minimizes SpreadsheetApp API calls and redundant sheet reads
+ * - Single-pass in-memory updates
+ * - Supports instant punches, editing, and deleting
  */
 
 const EVENTS_SHEET = "Events";
@@ -81,7 +79,8 @@ function doPost(e) {
         sheet.getRange(targetRowIndex, 2).setValue(dateKey);
 
         const now = new Date();
-        const updatedEvents = readEvents_(ss).filter(row => isSameDay_(row.timestamp, dateKey));
+        const allEvents = readEvents_(ss);
+        const updatedEvents = allEvents.filter(row => isSameDay_(row.timestamp, dateKey));
         const updatedSummary = summarize_(updatedEvents, now.getTime());
         upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
 
@@ -89,7 +88,7 @@ function doPost(e) {
           ok: true,
           message: "Punch time updated successfully.",
           events: updatedEvents,
-          history: buildDailyHistory_(readEvents_(ss))
+          history: buildDailyHistory_(allEvents)
         });
       } finally {
         lock.releaseLock();
@@ -134,7 +133,8 @@ function doPost(e) {
 
         const now = new Date();
         const dateKey = dateKey_(eventTimestamp || now);
-        const updatedEvents = readEvents_(ss).filter(row => isSameDay_(row.timestamp, dateKey));
+        const allEvents = readEvents_(ss);
+        const updatedEvents = allEvents.filter(row => isSameDay_(row.timestamp, dateKey));
         const updatedSummary = summarize_(updatedEvents, now.getTime());
         upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
 
@@ -142,7 +142,7 @@ function doPost(e) {
           ok: true,
           message: "Punch removed.",
           events: updatedEvents,
-          history: buildDailyHistory_(readEvents_(ss))
+          history: buildDailyHistory_(allEvents)
         });
       } finally {
         lock.releaseLock();
@@ -158,7 +158,6 @@ function doPost(e) {
     lock.waitLock(10000);
     try {
       const now = new Date();
-      // Allow custom past timestamp (e.g. if punch-in was forgotten)
       const eventTime = payload.timestamp ? new Date(payload.timestamp) : now;
       if (isNaN(eventTime.getTime())) {
         return json_({ ok: false, error: "Invalid timestamp." });
@@ -193,14 +192,23 @@ function doPost(e) {
         sessionId
       ]);
 
-      const updatedEvents = readEvents_(ss).filter(row => isSameDay_(row.timestamp, dateKey));
+      // Construct in-memory updated list without an expensive 2nd full sheet read
+      const newEventObj = {
+        timestamp: eventTime.toISOString(),
+        date: dateKey,
+        action: action,
+        sessionId: sessionId
+      };
+      const updatedAll = [...allEvents, newEventObj].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const updatedEvents = updatedAll.filter(row => isSameDay_(row.timestamp, dateKey));
       const updatedSummary = summarize_(updatedEvents, now.getTime());
       upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
+
       return json_({
         ok: true,
         message: messageFor_(action),
         events: updatedEvents,
-        history: buildDailyHistory_(readEvents_(ss))
+        history: buildDailyHistory_(updatedAll)
       });
     } finally {
       lock.releaseLock();
@@ -218,17 +226,20 @@ function getSpreadsheet_() {
 
 function ensureSheets_(ss) {
   let events = ss.getSheetByName(EVENTS_SHEET);
-  if (!events) events = ss.insertSheet(EVENTS_SHEET);
-  if (events.getLastRow() === 0) events.appendRow(HEADERS);
+  if (!events) {
+    events = ss.insertSheet(EVENTS_SHEET);
+    events.appendRow(HEADERS);
+    events.setFrozenRows(1);
+    events.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
+  }
 
   let daily = ss.getSheetByName(DAILY_SHEET);
-  if (!daily) daily = ss.insertSheet(DAILY_SHEET);
-  if (daily.getLastRow() === 0) daily.appendRow(DAILY_HEADERS);
-
-  events.setFrozenRows(1);
-  daily.setFrozenRows(1);
-  events.getRange(1, 1, 1, HEADERS.length).setFontWeight("bold");
-  daily.getRange(1, 1, 1, DAILY_HEADERS.length).setFontWeight("bold");
+  if (!daily) {
+    daily = ss.insertSheet(DAILY_SHEET);
+    daily.appendRow(DAILY_HEADERS);
+    daily.setFrozenRows(1);
+    daily.getRange(1, 1, 1, DAILY_HEADERS.length).setFontWeight("bold");
+  }
 }
 
 function isSameDay_(isoOrDate, targetDateKey) {
