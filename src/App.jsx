@@ -579,7 +579,7 @@ function ShiftlyBootLoader({ targetRef, onFinish }) {
   );
 }
 
-function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
+function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0 }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
   const daysData = useMemo(() => {
@@ -598,6 +598,7 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
 
       if (isToday) {
         workSec = currentSeconds;
+        breakSec = currentBreakSeconds;
         status = "TODAY";
       } else if (match) {
         workSec = match.workSeconds || 0;
@@ -605,7 +606,10 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
         status = match.status || "COMPLETED";
       }
 
+      const totalSec = workSec + breakSec;
       const hours = Math.round((workSec / 3600) * 10) / 10;
+      const breakHours = Math.round((breakSec / 3600) * 10) / 10;
+      const totalHours = Math.round((totalSec / 3600) * 10) / 10;
       const dayName = isToday ? "Today" : d.toLocaleDateString([], { weekday: "short" });
       const dateFormatted = d.toLocaleDateString([], { month: "short", day: "numeric" });
       const hitTarget = workSec >= 8 * 3600;
@@ -617,13 +621,16 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
         isToday,
         workSec,
         breakSec,
+        totalSec,
         hours,
+        breakHours,
+        totalHours,
         status,
         hitTarget
       });
     }
     return list;
-  }, [history, currentSeconds]);
+  }, [history, currentSeconds, currentBreakSeconds]);
 
   // Summary calculations
   const totalWorkedSeconds = daysData.reduce((acc, d) => acc + d.workSec, 0);
@@ -662,12 +669,13 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
           </div>
         </div>
 
-        {/* 7-Day Neo-Brutalist Bar Chart */}
+        {/* 7-Day Neo-Brutalist Bar Chart (Stacked Work + Break) */}
         <div className="chart-container">
           <div className="chart-header">
             <div className="chart-legend">
-              <span className="legend-item"><span className="legend-swatch hit" /> ≥ 8h Target</span>
-              <span className="legend-item"><span className="legend-swatch in-progress" /> &lt; 8h</span>
+              <span className="legend-item"><span className="legend-swatch work-partial" /> Work Time</span>
+              <span className="legend-item"><span className="legend-swatch break-swatch" /> Break Time</span>
+              <span className="legend-item"><span className="legend-swatch hit" /> ≥ 8h Goal</span>
             </div>
             <span className="chart-goal-label">--- 8H GOAL ---</span>
           </div>
@@ -682,7 +690,7 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
             <div className="chart-bars-row">
               {daysData.map((d) => {
                 // Max height scale is 10 hours = 100%
-                const barHeightPercent = Math.min(100, Math.max(d.hours > 0 ? 8 : 4, (d.hours / 10) * 100));
+                const barHeightPercent = Math.min(100, Math.max(d.totalSec > 0 ? 8 : 4, (d.totalSec / (10 * 3600)) * 100));
                 const isSelected = selectedDay && selectedDay.dateKey === d.dateKey;
 
                 return (
@@ -692,13 +700,29 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
                     onClick={() => setSelectedDay(isSelected ? null : d)}
                   >
                     <div className="bar-value-pill">
-                      {d.hours > 0 ? `${d.hours}h` : "—"}
+                      {d.hours > 0 ? `${d.hours}h` : d.breakHours > 0 ? `${d.breakHours}h` : "—"}
                     </div>
                     <div className="bar-track">
-                      <div
-                        className={`bar-fill ${d.hitTarget ? "hit" : d.hours > 0 ? "partial" : "empty"}`}
-                        style={{ height: `${barHeightPercent}%` }}
-                      />
+                      {d.totalSec === 0 ? (
+                        <div className="bar-stack empty" style={{ height: "6px" }} />
+                      ) : (
+                        <div className="bar-stack" style={{ height: `${barHeightPercent}%` }}>
+                          {d.breakSec > 0 && (
+                            <div
+                              className="bar-segment break-segment"
+                              style={{ flex: d.breakSec }}
+                              title={`Break: ${formatDuration(d.breakSec)}`}
+                            />
+                          )}
+                          {d.workSec > 0 && (
+                            <div
+                              className={`bar-segment work-segment ${d.hitTarget ? "hit" : "partial"}`}
+                              style={{ flex: d.workSec }}
+                              title={`Work: ${formatDuration(d.workSec)}`}
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="bar-label-group">
                       <strong className="bar-day-name">{d.dayName}</strong>
@@ -720,8 +744,9 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
                 </span>
               </div>
               <div className="detail-stats">
-                <span>Actual Work: <b>{formatDuration(selectedDay.workSec)}</b></span>
-                <span>Break Taken: <b>{formatDuration(selectedDay.breakSec)}</b></span>
+                <span className="stat-pill"><span className="legend-dot work-dot" /> Work: <b>{formatDuration(selectedDay.workSec)}</b></span>
+                <span className="stat-pill"><span className="legend-dot break-dot" /> Break: <b>{formatDuration(selectedDay.breakSec)}</b></span>
+                <span className="stat-pill">Total: <b>{formatDuration(selectedDay.totalSec || (selectedDay.workSec + selectedDay.breakSec))}</b></span>
               </div>
             </div>
           )}
@@ -1780,7 +1805,11 @@ export default function App() {
         </div>
       )}
 
-      <ShiftAnalyticsDashboard history={history} currentSeconds={summary.workSeconds} />
+      <ShiftAnalyticsDashboard
+        history={history}
+        currentSeconds={summary.workSeconds}
+        currentBreakSeconds={summary.breakSeconds}
+      />
 
       <footer>
         <div className="footer-info">

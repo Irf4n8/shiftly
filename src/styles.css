@@ -2280,13 +2280,14 @@ h2 {
   color: var(--text-muted);
 }
 .legend-swatch {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 3px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
 }
 .legend-swatch.hit { background: var(--accent-work); }
-.legend-swatch.in-progress { background: var(--accent-break); }
+.legend-swatch.work-partial { background: #facc15; }
+.legend-swatch.break-swatch { background: #f97316; }
 .chart-goal-label {
   color: var(--text-dim);
   font-size: 10px;
@@ -2353,8 +2354,10 @@ h2 {
 .chart-bar-col:hover {
   transform: translateY(-2px);
 }
+.chart-bar-col.selected .bar-stack,
 .chart-bar-col.selected .bar-fill {
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.7);
+  transform: scale(1.04);
 }
 
 .bar-value-pill {
@@ -2371,8 +2374,46 @@ h2 {
   height: 100%;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
 }
 
+.bar-stack {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  border: var(--border-width) solid var(--border);
+  border-bottom: none;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease;
+}
+
+.bar-stack.empty {
+  background: var(--surface-muted);
+  border-radius: 4px 4px 0 0;
+}
+
+.bar-segment {
+  width: 100%;
+  transition: flex 0.3s ease, background-color 0.2s ease;
+}
+
+/* Break segment (top portion of stacked bar) */
+.bar-segment.break-segment {
+  background: #f97316; /* sunset orange / warm break coral */
+  border-bottom: 1.5px solid rgba(0, 0, 0, 0.25);
+}
+
+/* Work segment (bottom portion of stacked bar) */
+.bar-segment.work-segment.partial {
+  background: #facc15; /* in-office yellow work time */
+}
+.bar-segment.work-segment.hit {
+  background: var(--accent-work); /* blue if >= 8h target achieved */
+}
+
+/* Fallback for bar-fill */
 .bar-fill {
   width: 100%;
   border-radius: 6px 6px 0 0;
@@ -2385,7 +2426,7 @@ h2 {
   background: var(--accent-work);
 }
 .bar-fill.partial {
-  background: var(--accent-break);
+  background: #facc15;
 }
 .bar-fill.empty {
   background: var(--surface-muted);
@@ -2452,13 +2493,33 @@ h2 {
 }
 .detail-stats {
   display: flex;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
   font-size: 12px;
   color: var(--text-muted);
+  flex-wrap: wrap;
 }
 .detail-stats b {
   color: var(--text-main);
   font-family: var(--font-mono);
+}
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid var(--border);
+}
+.legend-dot.work-dot {
+  background: #facc15;
+}
+.legend-dot.break-dot {
+  background: #f97316;
 }
 
 /* Recent Shifts List */
@@ -2868,17 +2929,35 @@ h2 {
 [data-theme="dark"] .chart-plot-area {
   border-color: #28354c;
 }
-[data-theme="dark"] .bar-fill.hit {
-  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+[data-theme="dark"] .bar-fill.hit,
+[data-theme="dark"] .bar-segment.work-segment.hit {
+  background: #38bdf8;
   border-color: #000000;
 }
-[data-theme="dark"] .bar-fill.partial {
-  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+[data-theme="dark"] .bar-fill.partial,
+[data-theme="dark"] .bar-segment.work-segment.partial {
+  background: #eab308;
   border-color: #000000;
 }
-[data-theme="dark"] .bar-fill.empty {
+[data-theme="dark"] .bar-segment.break-segment {
+  background: #ea580c;
+  border-bottom: 1.5px solid rgba(0, 0, 0, 0.6);
+}
+[data-theme="dark"] .bar-fill.empty,
+[data-theme="dark"] .bar-stack.empty {
   background: #1c273e;
   border-color: #28354c;
+}
+[data-theme="dark"] .legend-swatch.work-partial,
+[data-theme="dark"] .legend-dot.work-dot {
+  background: #eab308;
+}
+[data-theme="dark"] .legend-swatch.break-swatch,
+[data-theme="dark"] .legend-dot.break-dot {
+  background: #ea580c;
+}
+[data-theme="dark"] .legend-swatch.hit {
+  background: #38bdf8;
 }
 [data-theme="dark"] .chart-detail-box {
   background: #141c2e;
