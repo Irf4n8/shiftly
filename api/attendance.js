@@ -6,9 +6,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const url = process.env.APPS_SCRIPT_URL;
-  const secret = process.env.APPS_SCRIPT_SECRET;
-  const accessCode = process.env.APP_ACCESS_CODE;
+  const url = (process.env.APPS_SCRIPT_URL || "").trim();
+  const secret = (process.env.APPS_SCRIPT_SECRET || process.env.API_SECRET || "").trim().replace(/^["']|["']$/g, "");
+  const accessCode = (process.env.APP_ACCESS_CODE || "").trim().replace(/^["']|["']$/g, "");
 
   if (!url || !secret || !accessCode) {
     return res.status(500).json({
@@ -16,7 +16,8 @@ export default async function handler(req, res) {
     });
   }
 
-  if (typeof req.body?.accessCode !== "string" || req.body.accessCode !== accessCode) {
+  const clientCode = String(req.body?.accessCode || "").trim();
+  if (clientCode !== accessCode) {
     return res.status(401).json({ error: "Incorrect access code." });
   }
 

@@ -25,8 +25,9 @@ function doPost(e) {
   try {
     const payload = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     const props = PropertiesService.getScriptProperties();
-    const expectedSecret = props.getProperty("API_SECRET");
-    if (!expectedSecret || payload.secret !== expectedSecret) {
+    const expectedSecret = String(props.getProperty("API_SECRET") || "").trim();
+    const receivedSecret = String(payload.secret || "").trim();
+    if (!expectedSecret || receivedSecret !== expectedSecret) {
       return json_({ ok: false, error: "Unauthorized request." });
     }
 
