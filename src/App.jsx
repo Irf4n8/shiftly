@@ -594,6 +594,7 @@ export default function App() {
       {editingEvent && (
         <div className="modal-overlay" onClick={() => !busy && setEditingEvent(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" />
             <div className="modal-header">
               <h3>Edit Punch Time</h3>
               <button className="modal-close" onClick={() => setEditingEvent(null)}><X size={16} /></button>
@@ -633,6 +634,7 @@ export default function App() {
       {isAddModalOpen && (
         <div className="modal-overlay" onClick={() => !busy && setIsAddModalOpen(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle" />
             <div className="modal-header">
               <h3>Add Missed Punch</h3>
               <button className="modal-close" onClick={() => setIsAddModalOpen(false)}><X size={16} /></button>
