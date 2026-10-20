@@ -850,6 +850,9 @@ function ShiftlyBootLoader({ targetRef, onFinish }) {
         <div className="boot-charge-track">
           <div className="boot-charge-bar" />
         </div>
+        <span className="boot-crafted-by">
+          <span className="boot-crafted-spark">⚡</span> Crafted by <strong>Irf4n</strong>
+        </span>
       </div>
     </div>
   );
