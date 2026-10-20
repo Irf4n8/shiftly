@@ -51,6 +51,22 @@ const BREAK_SLOT_CONFIGS = [
   },
 ];
 
+/**
+ * Bulletproof 12-hour clock formatter ("h:mm AM/PM") across all mobile phones,
+ * tablets, and laptops regardless of device/browser 24-hour system locale settings.
+ */
+function formatClock(dateOrIso) {
+  if (!dateOrIso) return "—";
+  const d = dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso);
+  if (!Number.isFinite(d.getTime())) return "—";
+  let hours = d.getHours();
+  const minutes = d.getMinutes();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  const minutesStr = String(minutes).padStart(2, "0");
+  return `${hours}:${minutesStr} ${ampm}`;
+}
+
 function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT_STARTED") {
   const slots = BREAK_SLOT_CONFIGS.map((cfg) => ({
     ...cfg,
@@ -142,8 +158,8 @@ function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT
 
 function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd) {
   const { slots, totalExtraMinutes, currentMinOfDay } = breakSlotsData;
-  const stdTimeStr = standardEnd ? standardEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
-  const estTimeStr = estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
+  const stdTimeStr = standardEnd ? formatClock(standardEnd) : null;
+  const estTimeStr = estimatedEnd ? formatClock(estimatedEnd) : null;
 
   if (summary.status === "ON_BREAK") {
     const activeSlot = slots.find((s) => s.isActiveNow) || slots[0];
@@ -256,11 +272,6 @@ function formatDuration(seconds = 0, alwaysShowSeconds = true) {
     return `${h}h ${String(m).padStart(2, "0")}m`;
   }
   return `${m}m ${String(s).padStart(2, "0")}s`;
-}
-
-function formatClock(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 function formatDate(date = new Date()) {
@@ -1201,14 +1212,14 @@ export default function App() {
           <div>
             <span className="small-label">Estimated finish</span>
             <div className="finish-time-row">
-              <strong>{estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—"}</strong>
+              <strong>{estimatedEnd ? formatClock(estimatedEnd) : "—"}</strong>
               {totalExtraBreakMinutes > 0 && (
                 <span className="extra-break-badge">+{totalExtraBreakMinutes}m</span>
               )}
             </div>
             <span className="finish-subtext">
               {totalExtraBreakMinutes > 0 ? (
-                <span className="text-danger">+{totalExtraBreakMinutes}m extra break · Work until {estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "end"}</span>
+                <span className="text-danger">+{totalExtraBreakMinutes}m extra break · Work until {estimatedEnd ? formatClock(estimatedEnd) : "end"}</span>
               ) : (
                 <span>Includes 1h planned break</span>
               )}
@@ -1443,7 +1454,9 @@ export default function App() {
                 Adjusting timestamp for <strong>{ACTION_LABELS[editingEvent.action] || editingEvent.action}</strong>.
               </p>
               <div className="modal-field">
-                <label htmlFor="edit-punch-time">Corrected punch time:</label>
+                <label htmlFor="edit-punch-time">
+                  Corrected punch time: {editTimeInput && <span className="time-12h-tag">{formatClock(timeStringToIso(editTimeInput))}</span>}
+                </label>
                 <input
                   id="edit-punch-time"
                   type="time"
@@ -1495,7 +1508,9 @@ export default function App() {
                 </select>
               </div>
               <div className="modal-field">
-                <label htmlFor="manual-time">Punch Time:</label>
+                <label htmlFor="manual-time">
+                  Punch Time: {manualTimeInput && <span className="time-12h-tag">{formatClock(timeStringToIso(manualTimeInput))}</span>}
+                </label>
                 <input
                   id="manual-time"
                   type="time"

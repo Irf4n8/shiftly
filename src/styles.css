@@ -1630,6 +1630,26 @@ h2 {
   font-size: 12px;
   font-weight: 800;
   color: var(--text-main);
+  display: flex;
+  align-items: center;
+}
+.time-12h-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #7dd3fc;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  margin-left: 6px;
+}
+[data-theme="dark"] .time-12h-tag {
+  background: #082132;
+  color: #38bdf8;
+  border-color: #0369a1;
 }
 
 .modal-footer {
