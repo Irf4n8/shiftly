@@ -940,7 +940,7 @@ export default function App() {
 
         <div className="action-grid">
           {summary.status === "NOT_STARTED" && (
-            <button className="action-button primary" disabled={busy || loading} onClick={() => punch("START_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
+            <button className="action-button action-start-work" disabled={busy || loading} onClick={() => punch("START_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><ArrowDownToLine size={21} /></span>
               <span>
                 <strong>{customTimeFormatted ? `Start Work (${customTimeFormatted})` : "Start Work"}</strong>
@@ -950,7 +950,7 @@ export default function App() {
             </button>
           )}
           {summary.status === "WORKING" && (
-            <button className="action-button primary" disabled={busy || loading} onClick={() => punch("START_BREAK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
+            <button className="action-button action-start-break" disabled={busy || loading} onClick={() => punch("START_BREAK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><Coffee size={21} /></span>
               <span>
                 <strong>{customTimeFormatted ? `Start Break (${customTimeFormatted})` : "Start Break"}</strong>
@@ -960,7 +960,7 @@ export default function App() {
             </button>
           )}
           {summary.status === "ON_BREAK" && (
-            <button className="action-button primary" disabled={busy || loading} onClick={() => punch("RESUME_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
+            <button className="action-button action-resume-work" disabled={busy || loading} onClick={() => punch("RESUME_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><ArrowUpFromLine size={21} /></span>
               <span>
                 <strong>{customTimeFormatted ? `Resume Work (${customTimeFormatted})` : "Resume Work"}</strong>
@@ -970,7 +970,7 @@ export default function App() {
             </button>
           )}
           {(summary.status === "WORKING" || summary.status === "ON_BREAK") && (
-            <button className="action-button secondary" disabled={busy || loading} onClick={() => {
+            <button className="action-button action-end-day" disabled={busy || loading} onClick={() => {
               if (window.confirm("End your workday now? This will close today's attendance record.")) {
                 punch("END_DAY", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null);
               }
