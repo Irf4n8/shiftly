@@ -794,7 +794,6 @@ export default function App() {
           <a className="brand" href="/" aria-label="Shiftly home">
             <span className="brand-mark"><Zap size={18} /></span>
             <span>Shift<span className="brand-accent">ly</span></span>
-            <span className="brand-pill">NEO</span>
           </a>
           <div className="topbar-right">
             <button
@@ -833,7 +832,6 @@ export default function App() {
         <a className="brand" href="/" aria-label="Shiftly home">
           <span className="brand-mark"><Zap size={18} /></span>
           <span>Shift<span className="brand-accent">ly</span></span>
-          <span className="brand-pill">NEO</span>
         </a>
         <div className="topbar-right">
           <button

@@ -41,8 +41,6 @@
   --accent-end-text: #ffffff;
   --accent-danger: #ef4444;     /* Red alert */
 
-  --brand-pill-bg: #ffe600;
-  --brand-pill-text: #000000;
   --connection-online-bg: #dbeafe;
   --connection-online-text: #1d4ed8;
 
@@ -85,8 +83,6 @@
   --accent-end-text: #ffffff;
   --accent-danger: #ef4444;     /* Red Alert */
 
-  --brand-pill-bg: #ffe600;
-  --brand-pill-text: #000000;
   --connection-online-bg: #0c2838;
   --connection-online-text: #38bdf8;
 }
@@ -176,19 +172,6 @@ button {
 
 .brand-accent {
   color: var(--accent-work);
-}
-
-.brand-pill {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--brand-pill-bg);
-  color: var(--brand-pill-text);
-  border: var(--border-width) solid var(--border);
-  box-shadow: var(--shadow-xs);
-  letter-spacing: 0.5px;
 }
 
 .topbar-right {
