@@ -4,7 +4,7 @@ import {
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
   Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
   BarChart3, Scale, AlertTriangle, ShieldCheck, Compass, Info,
-  Bell, BellRing, Smartphone, Check
+  Bell, BellRing, Smartphone, Check, RotateCcw
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -68,13 +68,26 @@ function formatClock(dateOrIso) {
   return `${hours}:${minutesStr} ${ampm}`;
 }
 
-function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT_STARTED") {
-  const slots = BREAK_SLOT_CONFIGS.map((cfg) => ({
-    ...cfg,
-    usedSeconds: 0,
-    breaksCount: 0,
-    isActiveNow: false,
-  }));
+function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT_STARTED", appliedCompensation = null) {
+  const isCompensationForToday = appliedCompensation && appliedCompensation.date === todayKey();
+  const slots = BREAK_SLOT_CONFIGS.map((cfg) => {
+    let allowedMinutes = cfg.allowedMinutes;
+    let isCompensated = false;
+    let originalAllowedMinutes = cfg.allowedMinutes;
+    if (isCompensationForToday && appliedCompensation.slotId === cfg.id) {
+      allowedMinutes = appliedCompensation.targetMinutes;
+      isCompensated = true;
+    }
+    return {
+      ...cfg,
+      allowedMinutes,
+      isCompensated,
+      originalAllowedMinutes,
+      usedSeconds: 0,
+      breaksCount: 0,
+      isActiveNow: false,
+    };
+  });
 
   let pendingBreakStart = null;
   for (const event of events) {
@@ -157,14 +170,42 @@ function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT
   };
 }
 
-function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd) {
+function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd, appliedCompensation = null) {
   const { slots, totalExtraMinutes, currentMinOfDay } = breakSlotsData;
   const stdTimeStr = standardEnd ? formatClock(standardEnd) : null;
   const estTimeStr = estimatedEnd ? formatClock(estimatedEnd) : null;
 
+  // Active break mode advice
   if (summary.status === "ON_BREAK") {
     const activeSlot = slots.find((s) => s.isActiveNow) || slots[0];
     if (activeSlot.isOver) {
+      let preset = null;
+      if (activeSlot.id === "morning") {
+        const cutLunchTo = Math.max(0, 30 - activeSlot.extraMinutes);
+        if (cutLunchTo > 0) {
+          preset = {
+            slotId: "lunch",
+            slotName: "Lunch Break",
+            deductMinutes: activeSlot.extraMinutes,
+            originalAllowedMinutes: 30,
+            targetMinutes: cutLunchTo,
+            description: `Shorten Lunch from 30m to ${cutLunchTo}m to still leave on time`
+          };
+        }
+      } else if (activeSlot.id === "lunch") {
+        const cutEveningTo = Math.max(0, 15 - activeSlot.extraMinutes);
+        if (cutEveningTo > 0) {
+          preset = {
+            slotId: "evening",
+            slotName: "Evening Break",
+            deductMinutes: activeSlot.extraMinutes,
+            originalAllowedMinutes: 15,
+            targetMinutes: cutEveningTo,
+            description: `Shorten Evening Break from 15m to ${cutEveningTo}m to balance it`
+          };
+        }
+      }
+
       return {
         tone: "danger",
         title: `${activeSlot.shortName} Exceeded (+${activeSlot.extraMinutes}m)`,
@@ -172,10 +213,17 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
         recommendation: estTimeStr
           ? `Workday is extended. Resume work now to keep your finish at ${estTimeStr}.`
           : `Resume work soon to avoid extending your workday further.`,
+        preset,
         actionOptions: [
-          estTimeStr ? `Work extended to ${estTimeStr}` : null,
-          activeSlot.id === "morning" ? `Cut Lunch to ${Math.max(0, 30 - activeSlot.extraMinutes)}m to still leave on time` : null,
-          activeSlot.id === "lunch" ? `Cut Evening Break to ${Math.max(0, 15 - activeSlot.extraMinutes)}m to balance it` : null,
+          preset ? {
+            id: "preset-opt",
+            text: `Option 1: ${preset.description}`,
+            preset
+          } : null,
+          estTimeStr ? {
+            id: "extend-opt",
+            text: `Option 2: Work extended to ${estTimeStr}`
+          } : null,
         ].filter(Boolean),
       };
     } else {
@@ -184,14 +232,37 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
         title: `Active Break: ${activeSlot.shortName}`,
         headline: `${activeSlot.usedMinutes}m used (${activeSlot.remainingMinutes}m remaining before overage).`,
         recommendation: `Resume before ${activeSlot.allowedMinutes}m to keep your target finish of ${stdTimeStr || "on time"}.`,
+        preset: null,
         actionOptions: [
-          `Window: ${activeSlot.windowLabel}`,
-          `Allowance: ${activeSlot.allowedMinutes}m max`,
+          { id: "win", text: `Window: ${activeSlot.windowLabel}` },
+          { id: "allow", text: `Allowance: ${activeSlot.allowedMinutes}m max` },
         ],
       };
     }
   }
 
+  // If compensation preset is currently active for today
+  if (appliedCompensation && appliedCompensation.date === todayKey()) {
+    return {
+      tone: "success",
+      title: "⚡ Compensation Preset Active",
+      headline: `${appliedCompensation.slotName} budget adjusted to ${appliedCompensation.targetMinutes}m (-${appliedCompensation.deductMinutes}m compensated).`,
+      recommendation: stdTimeStr
+        ? `Live progress bar targets your standard on-time finish at ${stdTimeStr}!`
+        : `Your progress bar is targeting the compensated finish time.`,
+      preset: null,
+      isApplied: true,
+      actionOptions: [
+        {
+          id: "applied-status",
+          text: `Applied: ${appliedCompensation.slotName} set to ${appliedCompensation.targetMinutes}m (was ${appliedCompensation.originalAllowedMinutes}m)`
+        },
+        stdTimeStr ? { id: "finish-status", text: `Standard finish preserved: ${stdTimeStr}` } : null,
+      ].filter(Boolean),
+    };
+  }
+
+  // 0m extra break - perfect discipline
   if (totalExtraMinutes === 0) {
     return {
       tone: "success",
@@ -200,42 +271,81 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
       recommendation: stdTimeStr
         ? `You are on track to complete 8 hours right on time at ${stdTimeStr}.`
         : "Stay within the 15m/30m/15m planned limits to finish on time.",
+      preset: null,
       actionOptions: [
-        "Morning: 15m (11 AM – 1 PM)",
-        "Lunch: 30m (1 PM – 4 PM)",
-        "Evening: 15m (4 PM – 6:30 PM)",
+        { id: "opt-m", text: "Morning: 15m (11 AM – 1 PM)" },
+        { id: "opt-l", text: "Lunch: 30m (1 PM – 4 PM)" },
+        { id: "opt-e", text: "Evening: 15m (4 PM – 6:30 PM)" },
       ],
     };
   }
 
-  if (currentMinOfDay < 780) {
+  // Morning overage -> Can compensate by shortening Lunch
+  if (currentMinOfDay < 780 || (currentMinOfDay < 960 && totalExtraMinutes <= 30)) {
     const cutLunchTo = Math.max(0, 30 - totalExtraMinutes);
+    const preset = cutLunchTo > 0 ? {
+      slotId: "lunch",
+      slotName: "Lunch Break",
+      deductMinutes: totalExtraMinutes,
+      originalAllowedMinutes: 30,
+      targetMinutes: cutLunchTo,
+      description: `Shorten Lunch from 30m to ${cutLunchTo}m to still finish at ${stdTimeStr}`
+    } : null;
+
     return {
       tone: "danger",
       title: `Compensate +${totalExtraMinutes}m Break Overage`,
       headline: `Morning break went ${totalExtraMinutes}m over allowance.`,
       recommendation: `How to compensate:`,
+      preset,
       actionOptions: [
-        cutLunchTo > 0
-          ? `Option 1: Shorten Lunch from 30m to ${cutLunchTo}m to still finish at ${stdTimeStr}`
-          : `Option 1: Deduct from upcoming afternoon breaks`,
-        estTimeStr ? `Option 2: Work ${totalExtraMinutes}m extra and finish at ${estTimeStr}` : null,
+        preset ? {
+          id: "preset-lunch",
+          text: `Option 1: Shorten Lunch from 30m to ${cutLunchTo}m to still finish at ${stdTimeStr}`,
+          preset
+        } : {
+          id: "deduct-lunch",
+          text: `Option 1: Deduct from upcoming afternoon breaks`
+        },
+        estTimeStr ? {
+          id: "extend-work",
+          text: `Option 2: Work ${totalExtraMinutes}m extra and finish at ${estTimeStr}`
+        } : null,
       ].filter(Boolean),
     };
   }
 
-  if (currentMinOfDay < 960) {
+  // Afternoon / Lunch overage -> Can compensate by shortening Evening Break
+  if (currentMinOfDay < 1110) { // before 6:30 PM
     const cutEveningTo = Math.max(0, 15 - totalExtraMinutes);
+    const preset = totalExtraMinutes <= 15 && cutEveningTo > 0 ? {
+      slotId: "evening",
+      slotName: "Evening Break",
+      deductMinutes: totalExtraMinutes,
+      originalAllowedMinutes: 15,
+      targetMinutes: cutEveningTo,
+      description: `Shorten 4:00 PM Evening break from 15m to ${cutEveningTo}m to finish at ${stdTimeStr}`
+    } : null;
+
     return {
       tone: "danger",
       title: `Compensate +${totalExtraMinutes}m Extra Break`,
       headline: `Accumulated +${totalExtraMinutes}m over break allowance.`,
       recommendation: `How to compensate:`,
+      preset,
       actionOptions: [
-        totalExtraMinutes <= 15
-          ? `Option 1: Shorten 4:00 PM Evening break from 15m to ${cutEveningTo}m to finish at ${stdTimeStr}`
-          : `Evening break (15m) cannot fully absorb +${totalExtraMinutes}m`,
-        estTimeStr ? `Option 2: Work until ${estTimeStr} (+${totalExtraMinutes}m) to complete 8h` : null,
+        preset ? {
+          id: "preset-evening",
+          text: `Option 1: Shorten 4:00 PM Evening break from 15m to ${cutEveningTo}m to finish at ${stdTimeStr}`,
+          preset
+        } : {
+          id: "cannot-absorb",
+          text: `Evening break (15m) cannot fully absorb +${totalExtraMinutes}m`
+        },
+        estTimeStr ? {
+          id: "extend-work",
+          text: `Option 2: Work until ${estTimeStr} (+${totalExtraMinutes}m) to complete 8h`
+        } : null,
       ].filter(Boolean),
     };
   }
@@ -247,9 +357,10 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
     recommendation: estTimeStr
       ? `All planned break slots are over. Work until ${estTimeStr} (+${totalExtraMinutes}m) to fulfill your 8-hour requirement.`
       : `Extend your shift by +${totalExtraMinutes}m to compensate.`,
+    preset: null,
     actionOptions: [
-      estTimeStr ? `Compensated finish: ${estTimeStr}` : null,
-      stdTimeStr ? `Standard finish was: ${stdTimeStr}` : null,
+      estTimeStr ? { id: "finish-est", text: `Compensated finish: ${estTimeStr}` } : null,
+      stdTimeStr ? { id: "finish-std", text: `Standard finish was: ${stdTimeStr}` } : null,
     ].filter(Boolean),
   };
 }
@@ -259,6 +370,127 @@ function todayKey(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Calculates consecutive workday streak meeting ≥8h work and 0m break overage.
+ * Excludes weekends so Friday-to-Monday continuity is rewarded.
+ */
+function calculateStreak(history = [], currentSeconds = 0, currentBreakSeconds = 0) {
+  let streak = 0;
+
+  // Check today: if today already reached 8h work and has 0m break overage, today counts!
+  const todayTargetHit = currentSeconds >= TARGET_SECONDS;
+  const todayCleanBreaks = currentBreakSeconds <= BREAK_ALLOWANCE_SECONDS;
+  if (todayTargetHit && todayCleanBreaks) {
+    streak += 1;
+  }
+
+  const todayStr = todayKey();
+  const sorted = [...(history || [])]
+    .filter((h) => h.date !== todayStr)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  let checkDate = new Date();
+  checkDate.setDate(checkDate.getDate() - 1);
+
+  for (const day of sorted) {
+    // Skip weekends when walking back consecutive workdays
+    while (checkDate.getDay() === 0 || checkDate.getDay() === 6) {
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    const targetKey = todayKey(checkDate);
+
+    if (day.date === targetKey) {
+      const workSec = day.workSeconds || 0;
+      const breakSec = day.breakSeconds || 0;
+      const hitTarget = workSec >= TARGET_SECONDS;
+      const cleanBreaks = breakSec <= BREAK_ALLOWANCE_SECONDS;
+
+      if (hitTarget && cleanBreaks) {
+        streak += 1;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break; // Streak broke on this day
+      }
+    } else if (day.date < targetKey) {
+      // Missed an expected workday
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
+ * Calculates Weekly Attendance & Break Discipline Performance Summary
+ */
+function calculateWeeklyStats(history = [], currentSeconds = 0, currentBreakSeconds = 0) {
+  const now = new Date();
+  const dayOfWeek = (now.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek);
+  monday.setHours(0, 0, 0, 0);
+
+  let totalWorkSec = 0;
+  let totalBreakSec = 0;
+  let totalOverageSec = 0;
+  let daysHitTarget = 0;
+  let activeDays = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const key = todayKey(d);
+    const isToday = key === todayKey(now);
+    if (d > now && !isToday) continue;
+
+    let wSec = 0;
+    let bSec = 0;
+    if (isToday) {
+      wSec = currentSeconds;
+      bSec = currentBreakSeconds;
+    } else {
+      const found = (history || []).find((h) => h.date === key);
+      if (found) {
+        wSec = found.workSeconds || 0;
+        bSec = found.breakSeconds || 0;
+      }
+    }
+
+    if (wSec > 0 || bSec > 0) {
+      activeDays += 1;
+      totalWorkSec += wSec;
+      totalBreakSec += bSec;
+      const overage = Math.max(0, bSec - BREAK_ALLOWANCE_SECONDS);
+      totalOverageSec += overage;
+      if (wSec >= TARGET_SECONDS) {
+        daysHitTarget += 1;
+      }
+    }
+  }
+
+  // Break discipline %: 100% - overageRatio
+  let breakDiscipline = 100;
+  const totalAllowedSec = activeDays * BREAK_ALLOWANCE_SECONDS;
+  if (totalAllowedSec > 0 && totalOverageSec > 0) {
+    const raw = Math.max(0, ((totalAllowedSec - totalOverageSec) / totalAllowedSec) * 100);
+    breakDiscipline = Math.round(raw * 10) / 10;
+  }
+
+  const h = Math.floor(totalWorkSec / 3600);
+  const m = Math.floor((totalWorkSec % 3600) / 60);
+  const loggedText = `${h}h ${String(m).padStart(2, "0")}m logged`;
+
+  return {
+    totalWorkSec,
+    totalBreakSec,
+    totalOverageSec,
+    loggedText,
+    breakDiscipline,
+    activeDays,
+    daysHitTarget
+  };
 }
 
 function formatDuration(seconds = 0, alwaysShowSeconds = true) {
@@ -749,7 +981,7 @@ function TimeSwipePicker({ timeStr, onChange, idPrefix = "time-swipe" }) {
   );
 }
 
-function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0 }) {
+function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0, weeklyStats = null }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
   const daysData = useMemo(() => {
@@ -820,6 +1052,32 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
       </div>
 
       <div className="analytics-card">
+        {/* Weekly Summary Card (Gamification & Discipline) */}
+        {weeklyStats && (
+          <div className="weekly-summary-card">
+            <div className="weekly-card-left">
+              <div className="weekly-badge-icon">
+                <Sparkles size={18} />
+              </div>
+              <div className="weekly-text-group">
+                <span className="weekly-eyebrow">THIS WEEK SUMMARY</span>
+                <h3 className="weekly-title">
+                  This week: <strong>{weeklyStats.loggedText}</strong> · <span className="discipline-tag">{weeklyStats.breakDiscipline}% break discipline</span>
+                </h3>
+                <p className="weekly-sub">
+                  {weeklyStats.daysHitTarget} of {weeklyStats.activeDays || 1} logged shifts completed 8h {weeklyStats.totalOverageSec === 0 ? "· Zero break overage! 🏆" : `· ${Math.ceil(weeklyStats.totalOverageSec / 60)}m extra break taken`}
+                </p>
+              </div>
+            </div>
+            <div className="weekly-card-right">
+              <div className="discipline-meter-box">
+                <span className="discipline-pct">{weeklyStats.breakDiscipline}%</span>
+                <span className="discipline-label">Discipline</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* KPI metrics row */}
         <div className="analytics-kpis">
           <div className="kpi-item">
@@ -966,7 +1224,14 @@ export default function App() {
   const [accessCode, setAccessCode] = useState(() => sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access") || "");
   const [codeInput, setCodeInput] = useState("");
   const [authenticated, setAuthenticated] = useState(() => Boolean(sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access")));
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState(() => {
+    try {
+      const cached = localStorage.getItem("shiftly_events_" + todayKey());
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -978,6 +1243,55 @@ export default function App() {
   const brandMarkRef = useRef(null);
   const [showBootLoader, setShowBootLoader] = useState(true);
   const [justDocked, setJustDocked] = useState(false);
+
+  // 1-Tap Applied Compensation Preset state (persisted per day)
+  const [appliedCompensation, setAppliedCompensation] = useState(() => {
+    try {
+      const stored = localStorage.getItem("shiftly_applied_compensation");
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.date === todayKey()) {
+        return parsed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const applyCompensationPreset = useCallback((preset) => {
+    const item = {
+      ...preset,
+      date: todayKey(),
+      appliedAt: Date.now()
+    };
+    setAppliedCompensation(item);
+    try {
+      localStorage.setItem("shiftly_applied_compensation", JSON.stringify(item));
+    } catch (e) {}
+    triggerVibrate([100, 50, 150]);
+    setNotice(`⚡ Compensation preset applied! ${preset.slotName} adjusted to ${preset.targetMinutes}m (targets on-time finish).`);
+  }, []);
+
+  const undoCompensationPreset = useCallback(() => {
+    setAppliedCompensation(null);
+    try {
+      localStorage.removeItem("shiftly_applied_compensation");
+    } catch (e) {}
+    triggerVibrate([100]);
+    setNotice("↺ Compensation preset undone. Original break budget restored.");
+  }, []);
+
+  // Offline Resilience Queue (Zero Lost Punches)
+  const [offlineQueue, setOfflineQueue] = useState(() => {
+    try {
+      const q = localStorage.getItem("shiftly_offline_queue");
+      return q ? JSON.parse(q) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [isSyncingQueue, setIsSyncingQueue] = useState(false);
 
   const handleBootFinish = useCallback(() => {
     setShowBootLoader(false);
@@ -1026,6 +1340,9 @@ export default function App() {
       if (!response.ok || !data.ok) throw new Error(data.error || "Unable to load attendance.");
       setEvents(data.events || []);
       setHistory(data.history || []);
+      try {
+        localStorage.setItem("shiftly_events_" + todayKey(), JSON.stringify(data.events || []));
+      } catch (e) {}
       setConnected(true);
       setError("");
     } catch (e) {
@@ -1035,6 +1352,75 @@ export default function App() {
       setLoading(false);
     }
   }, [accessCode]);
+
+  const flushOfflineQueue = useCallback(async () => {
+    if (isSyncingQueue || !accessCode) return;
+    let queue = [];
+    try {
+      const stored = localStorage.getItem("shiftly_offline_queue");
+      queue = stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      queue = [];
+    }
+    if (queue.length === 0) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
+    setIsSyncingQueue(true);
+    const remainingQueue = [...queue];
+    let syncedCount = 0;
+
+    for (const item of queue) {
+      try {
+        const response = await fetch("/api/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: item.action,
+            timestamp: item.timestamp,
+            accessCode: item.accessCode || accessCode
+          })
+        });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          syncedCount++;
+          const idx = remainingQueue.findIndex((q) => q.id === item.id);
+          if (idx !== -1) remainingQueue.splice(idx, 1);
+          setOfflineQueue([...remainingQueue]);
+          try {
+            localStorage.setItem("shiftly_offline_queue", JSON.stringify(remainingQueue));
+          } catch (e) {}
+        } else {
+          break; // preserve sequential queue order
+        }
+      } catch (e) {
+        break;
+      }
+    }
+
+    if (syncedCount > 0) {
+      setNotice(`✓ Synced ${syncedCount} queued punch${syncedCount > 1 ? "es" : ""} to Google Sheets!`);
+      triggerVibrate([100, 50, 100]);
+      refresh(true);
+    }
+    setIsSyncingQueue(false);
+  }, [accessCode, isSyncingQueue, refresh]);
+
+  // Online / offline window listeners
+  useEffect(() => {
+    const handleOnline = () => {
+      setConnected(true);
+      flushOfflineQueue();
+    };
+    const handleOffline = () => {
+      setConnected(false);
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [flushOfflineQueue]);
 
   useEffect(() => {
     if (authenticated && accessCode) {
@@ -1046,16 +1432,25 @@ export default function App() {
       // 2. Real-time background sync every 10 seconds so mobile & laptop stay synchronized
       const pollTimer = window.setInterval(() => {
         refresh(true); // silent background fetch
+        if (offlineQueue.length > 0) {
+          flushOfflineQueue();
+        }
       }, 10000);
 
       // 3. Instant sync whenever switching back to tab, window, or unlocking device
       const handleVisibilityChange = () => {
         if (document.visibilityState === "visible") {
           refresh(true);
+          if (offlineQueue.length > 0) {
+            flushOfflineQueue();
+          }
         }
       };
       const handleFocus = () => {
         refresh(true);
+        if (offlineQueue.length > 0) {
+          flushOfflineQueue();
+        }
       };
 
       document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -1070,7 +1465,7 @@ export default function App() {
     } else {
       setLoading(false);
     }
-  }, [refresh, authenticated, accessCode]);
+  }, [refresh, authenticated, accessCode, flushOfflineQueue, offlineQueue.length]);
 
   const summary = useMemo(() => summarize(events, now), [events, now]);
   const workRemaining = Math.max(0, TARGET_SECONDS - summary.workSeconds);
@@ -1078,10 +1473,10 @@ export default function App() {
   const breakOver = Math.max(0, summary.breakSeconds - BREAK_ALLOWANCE_SECONDS);
   const progress = Math.min(100, (summary.workSeconds / TARGET_SECONDS) * 100);
 
-  // 3-Window Break Policy computation: Morning (11-1, 15m), Lunch (1-4, 30m), Evening (4-6:30, 15m)
+  // 3-Window Break Policy computation with applied compensation support
   const breakSlotsData = useMemo(() => {
-    return getBreakSlotsData(events, now, summary.status);
-  }, [events, now, summary.status]);
+    return getBreakSlotsData(events, now, summary.status, appliedCompensation);
+  }, [events, now, summary.status, appliedCompensation]);
 
   // Standard finish without any extra breaks (fixed 1h break)
   const standardEnd = useMemo(() => {
@@ -1097,7 +1492,16 @@ export default function App() {
     return Math.max(fromSlots, fromOverall);
   }, [breakSlotsData.totalExtraMinutes, summary.breakSeconds]);
 
-  const effectiveBreakSeconds = BREAK_ALLOWANCE_SECONDS + totalExtraBreakMinutes * 60;
+  // If compensation preset is active, deduct compensated minutes so progress bar and finish time target standard on-time finish!
+  const compensatedDeductionMinutes = useMemo(() => {
+    if (appliedCompensation && appliedCompensation.date === todayKey()) {
+      return appliedCompensation.deductMinutes || 0;
+    }
+    return 0;
+  }, [appliedCompensation]);
+
+  const netExtraBreakMinutes = Math.max(0, totalExtraBreakMinutes - compensatedDeductionMinutes);
+  const effectiveBreakSeconds = BREAK_ALLOWANCE_SECONDS + netExtraBreakMinutes * 60;
 
   const estimatedEnd = useMemo(() => {
     if (!summary.firstPunch || summary.status === "COMPLETED") return null;
@@ -1106,8 +1510,17 @@ export default function App() {
   }, [summary.firstPunch, effectiveBreakSeconds, summary.status]);
 
   const compensationAdvice = useMemo(() => {
-    return generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd);
-  }, [breakSlotsData, summary, standardEnd, estimatedEnd]);
+    return generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd, appliedCompensation);
+  }, [breakSlotsData, summary, standardEnd, estimatedEnd, appliedCompensation]);
+
+  // Gamification: Streak & Weekly Performance Stats
+  const streak = useMemo(() => {
+    return calculateStreak(history, summary.workSeconds, summary.breakSeconds);
+  }, [history, summary.workSeconds, summary.breakSeconds]);
+
+  const weeklyStats = useMemo(() => {
+    return calculateWeeklyStats(history, summary.workSeconds, summary.breakSeconds);
+  }, [history, summary.workSeconds, summary.breakSeconds]);
 
   // Smart Break Focus Timer state
   const [customBreakLimit, setCustomBreakLimit] = useState(null);
@@ -1213,6 +1626,9 @@ export default function App() {
       setAuthenticated(true);
       setEvents(data.events || []);
       setHistory(data.history || []);
+      try {
+        localStorage.setItem("shiftly_events_" + todayKey(), JSON.stringify(data.events || []));
+      } catch (e) {}
       setConnected(true);
       setCodeInput("");
       setNotice("");
@@ -1236,7 +1652,7 @@ export default function App() {
   async function punch(action, customTimestamp = null) {
     // Instant Optimistic Update (0ms latency feel)
     const eventTimeIso = customTimestamp || new Date().toISOString();
-    const tempSessionId = "temp-" + Date.now();
+    const tempSessionId = "punch_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
     const optimisticEvent = {
       action,
       timestamp: eventTimeIso,
@@ -1244,7 +1660,14 @@ export default function App() {
       sessionId: tempSessionId
     };
     const prevEvents = [...events];
-    setEvents(prev => [...prev, optimisticEvent].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+    const nextEvents = [...prevEvents, optimisticEvent].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    setEvents(nextEvents);
+    try {
+      localStorage.setItem("shiftly_events_" + todayKey(), JSON.stringify(nextEvents));
+    } catch (e) {}
+
     setNotice(ACTION_LABELS[action] || "Saved.");
     setIsCustomTimeOpen(false);
     setCustomTime(getLocalTimeString());
@@ -1260,13 +1683,31 @@ export default function App() {
       setCustomBreakLimit(null);
     }
 
+    const queueItem = {
+      id: tempSessionId,
+      action,
+      timestamp: eventTimeIso,
+      accessCode,
+      queuedAt: Date.now()
+    };
+
+    // If device reports offline, queue immediately without throwing or reverting
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const nextQueue = [...offlineQueue, queueItem];
+      setOfflineQueue(nextQueue);
+      try {
+        localStorage.setItem("shiftly_offline_queue", JSON.stringify(nextQueue));
+      } catch (e) {}
+      setConnected(false);
+      setNotice(`${nextQueue.length} punch${nextQueue.length > 1 ? "es" : ""} queued offline · will sync when back online`);
+      triggerVibrate([150, 50, 150]);
+      return;
+    }
+
     setBusy(true);
     setError("");
     try {
-      const body = { action, accessCode };
-      if (customTimestamp) {
-        body.timestamp = customTimestamp;
-      }
+      const body = { action, accessCode, timestamp: eventTimeIso };
       const response = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1276,12 +1717,22 @@ export default function App() {
       if (!response.ok || !data.ok) throw new Error(data.error || "Could not save this punch.");
       setEvents(data.events || []);
       setHistory(data.history || []);
+      try {
+        localStorage.setItem("shiftly_events_" + todayKey(), JSON.stringify(data.events || []));
+      } catch (e) {}
       setConnected(true);
       setNotice(data.message || ACTION_LABELS[action] || "Saved.");
     } catch (e) {
-      // Revert optimistic update if request fails
-      setEvents(prevEvents);
-      setError(e.message || "Could not save this punch.");
+      // OFFLINE RESILIENCE: Zero lost punches!
+      // Do NOT revert the optimistic update! Keep it in events and queue it!
+      const nextQueue = [...offlineQueue, queueItem];
+      setOfflineQueue(nextQueue);
+      try {
+        localStorage.setItem("shiftly_offline_queue", JSON.stringify(nextQueue));
+      } catch (err) {}
+      setConnected(false);
+      setNotice(`Saved locally. ${nextQueue.length} punch queued · syncing when back online.`);
+      triggerVibrate([150, 50, 150]);
     } finally {
       setBusy(false);
     }
@@ -1491,6 +1942,22 @@ export default function App() {
           <span>Shift<span className="brand-accent">ly</span></span>
         </a>
         <div className="topbar-right">
+          {offlineQueue.length > 0 && (
+            <div className="offline-sync-badge" title="Punches stored locally awaiting connection. Will auto-sync when online.">
+              <span className="amber-dot" />
+              <span className="offline-sync-text">
+                {offlineQueue.length} punch{offlineQueue.length > 1 ? "es" : ""} queued
+              </span>
+              <button
+                type="button"
+                className="sync-now-btn"
+                onClick={() => flushOfflineQueue()}
+                disabled={isSyncingQueue}
+              >
+                {isSyncingQueue ? <RefreshCw size={11} className="spin" /> : "Sync now"}
+              </button>
+            </div>
+          )}
           <button
             type="button"
             className="theme-toggle-btn"
@@ -1502,7 +1969,7 @@ export default function App() {
           </button>
           <div className={`connection ${connected ? "online" : "offline"}`}>
             {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
-            <span>{connected ? "Syncing Live" : "Offline"}</span>
+            <span>{connected ? "Syncing Live" : offlineQueue.length > 0 ? "Offline (Queued)" : "Offline"}</span>
           </div>
           <button className="logout-button" onClick={logout}>Lock</button>
         </div>
@@ -1515,7 +1982,16 @@ export default function App() {
             <span>SMART SHIFT TRACKER</span>
           </div>
           <h1>Master your workday,<br /><span>shift by shift.</span></h1>
-          <p className="date-line"><CalendarDays size={15} /> {formatDate()}</p>
+          <div className="date-streak-row">
+            <p className="date-line"><CalendarDays size={15} /> {formatDate()}</p>
+            <div className={`streak-badge ${streak > 0 ? "active" : "empty"}`} title="Consecutive days completing 8 hours with zero break overages">
+              <span className="streak-flame">🔥</span>
+              <span className="streak-badge-text">
+                <strong>{streak > 0 ? `${streak}-day on-time streak!` : "0-day streak"}</strong>
+                <small>{streak > 0 ? "8h completed · zero overages" : "Hit 8h + ≤1h break today to start"}</small>
+              </span>
+            </div>
+          </div>
         </div>
         <div className="status-pill">
           <span className={`status-dot ${summary.status.toLowerCase()}`} />
@@ -1551,12 +2027,16 @@ export default function App() {
             <span className="small-label">Estimated finish</span>
             <div className="finish-time-row">
               <strong>{estimatedEnd ? formatClock(estimatedEnd) : "—"}</strong>
-              {totalExtraBreakMinutes > 0 && (
+              {appliedCompensation ? (
+                <span className="compensated-finish-badge" title="Targeting on-time finish via shortened break preset">⚡ Compensated</span>
+              ) : totalExtraBreakMinutes > 0 ? (
                 <span className="extra-break-badge">+{totalExtraBreakMinutes}m</span>
-              )}
+              ) : null}
             </div>
             <span className="finish-subtext">
-              {totalExtraBreakMinutes > 0 ? (
+              {appliedCompensation ? (
+                <span className="text-compensated">⚡ Compensated finish (-{appliedCompensation.deductMinutes}m {appliedCompensation.slotName}) · Targets {estimatedEnd ? formatClock(estimatedEnd) : "on time"}</span>
+              ) : totalExtraBreakMinutes > 0 ? (
                 <span className="text-danger">+{totalExtraBreakMinutes}m extra break · Work until {estimatedEnd ? formatClock(estimatedEnd) : "end"}</span>
               ) : (
                 <span>Includes 1h planned break</span>
@@ -1686,13 +2166,18 @@ export default function App() {
           <p className="metric-label">Daily break schedule</p>
           <div className="break-slots-list">
             {breakSlotsData.slots.map((slot) => (
-              <div key={slot.id} className={`break-slot-item ${slot.isActiveNow ? "active-now" : ""} ${slot.isOver ? "slot-over" : ""}`}>
+              <div key={slot.id} className={`break-slot-item ${slot.isActiveNow ? "active-now" : ""} ${slot.isOver ? "slot-over" : ""} ${slot.isCompensated ? "is-compensated" : ""}`}>
                 <div className="slot-row-top">
                   <span className="slot-title">
                     <strong>{slot.shortName}</strong>
                     <small>{slot.windowLabel}</small>
                   </span>
                   <div className="slot-badges">
+                    {slot.isCompensated && (
+                      <span className="slot-compensated-badge" title={`Adjusted by 1-tap compensation preset (was ${slot.originalAllowedMinutes}m)`}>
+                        ⚡ {slot.allowedMinutes}m preset
+                      </span>
+                    )}
                     {slot.isOver && (
                       <span className="slot-over-badge">+{slot.extraMinutes}m</span>
                     )}
@@ -1725,17 +2210,62 @@ export default function App() {
               <span className="compensation-eyebrow">BREAK COMPENSATION ADVISOR</span>
               <h3>{compensationAdvice.title}</h3>
             </div>
+            {appliedCompensation && (
+              <button
+                type="button"
+                className="btn-undo-compensation"
+                onClick={undoCompensationPreset}
+                title="Revert to original break budget and standard schedule"
+              >
+                <RotateCcw size={13} />
+                <span>Undo Preset</span>
+              </button>
+            )}
           </div>
           <p className="compensation-headline">{compensationAdvice.headline}</p>
           <p className="compensation-recommendation">{compensationAdvice.recommendation}</p>
+
+          {appliedCompensation && (
+            <div className="compensation-applied-banner">
+              <div className="applied-pill">
+                <Zap size={13} className="applied-zap-icon" />
+                <span><strong>Preset Active:</strong> {appliedCompensation.slotName} reduced to {appliedCompensation.targetMinutes}m (-{appliedCompensation.deductMinutes}m deducted)</span>
+              </div>
+              <button
+                type="button"
+                className="btn-undo-link"
+                onClick={undoCompensationPreset}
+              >
+                <RotateCcw size={12} />
+                <span>Undo</span>
+              </button>
+            </div>
+          )}
+
           {compensationAdvice.actionOptions && compensationAdvice.actionOptions.length > 0 && (
             <div className="compensation-actions-list">
-              {compensationAdvice.actionOptions.map((opt, i) => (
-                <div key={i} className="compensation-option-pill">
-                  <span className="option-bullet">✦</span>
-                  <span>{opt}</span>
-                </div>
-              ))}
+              {compensationAdvice.actionOptions.map((opt, i) => {
+                const isPresetOpt = Boolean(opt.preset);
+                return (
+                  <div key={opt.id || i} className={`compensation-option-pill ${isPresetOpt ? "with-apply-action" : ""}`}>
+                    <div className="option-text-group">
+                      <span className="option-bullet">✦</span>
+                      <span>{opt.text}</span>
+                    </div>
+                    {isPresetOpt && (
+                      <button
+                        type="button"
+                        className="btn-apply-preset"
+                        onClick={() => applyCompensationPreset(opt.preset)}
+                        title={`Adjust ${opt.preset.slotName} budget to ${opt.preset.targetMinutes}m`}
+                      >
+                        <Zap size={12} />
+                        <span>Apply</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
@@ -1979,6 +2509,7 @@ export default function App() {
         history={history}
         currentSeconds={summary.workSeconds}
         currentBreakSeconds={summary.breakSeconds}
+        weeklyStats={weeklyStats}
       />
 
       <footer>

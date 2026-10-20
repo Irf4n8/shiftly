@@ -183,6 +183,60 @@ button {
   gap: 8px;
 }
 
+/* Offline Resilience Sync Badge */
+.offline-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: var(--border-width) solid var(--border);
+  background: #fef3c7;
+  color: #92400e;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: var(--shadow-xs);
+  min-height: 38px;
+  animation: brutalPulse 2.2s infinite ease-in-out;
+}
+.amber-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 1.5px solid #78350f;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.offline-sync-text {
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+.sync-now-btn {
+  background: #ffffff;
+  border: 1.5px solid #92400e;
+  border-radius: 6px;
+  color: #78350f;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow: 1px 1px 0px #78350f;
+  white-space: nowrap;
+}
+.sync-now-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px #78350f;
+  background: #fefce8;
+}
+.sync-now-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 transparent;
+}
+
 /* Theme Toggle Button */
 .theme-toggle-btn {
   display: inline-flex;
@@ -316,6 +370,66 @@ h1 span {
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 0;
+}
+
+/* Streak Gamification Badge near Date */
+.date-streak-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 10px;
+  border: var(--border-width) solid var(--border);
+  background: #fffbeb;
+  color: #92400e;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: default;
+}
+.streak-badge:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-sm);
+}
+.streak-badge.active {
+  background: #fff7ed;
+  border-color: #ea580c;
+  color: #9a3412;
+}
+.streak-flame {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-block;
+  animation: flameWiggle 2s infinite ease-in-out;
+}
+@keyframes flameWiggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-8deg) scale(1.1); }
+  75% { transform: rotate(8deg) scale(1.05); }
+}
+.streak-badge-text {
+  display: flex;
+  flex-direction: column;
+}
+.streak-badge-text strong {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+.streak-badge-text small {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1.2;
 }
 
 /* Status Pill */
@@ -1209,6 +1323,35 @@ h1 span {
   gap: 12px;
   margin-bottom: 10px;
 }
+.btn-undo-compensation {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: var(--border-width) solid var(--border);
+  background: #ffffff;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.btn-undo-compensation:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-sm);
+  background: #fef2f2;
+  color: #dc2626;
+}
+.btn-undo-compensation:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 transparent;
+}
+
 .compensation-icon {
   width: 38px;
   height: 38px;
@@ -1274,6 +1417,56 @@ h1 span {
   flex-direction: column;
   gap: 8px;
 }
+
+.compensation-applied-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 2px solid #059669;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 2px 2px 0px #047857;
+}
+.applied-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #065f46;
+}
+.applied-zap-icon {
+  color: #059669;
+  flex-shrink: 0;
+}
+.btn-undo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1.5px solid #059669;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: #065f46;
+  cursor: pointer;
+  box-shadow: 1px 1px 0px #047857;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+}
+.btn-undo-link:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px #047857;
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
 .compensation-option-pill {
   display: flex;
   align-items: center;
@@ -1286,6 +1479,73 @@ h1 span {
   font-weight: 700;
   color: var(--text-main);
   box-shadow: 2px 2px 0px rgba(0,0,0,0.06);
+}
+.compensation-option-pill.with-apply-action {
+  justify-content: space-between;
+}
+.option-text-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.btn-apply-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--accent-break);
+  color: var(--accent-break-text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--border);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-apply-preset:hover {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 3.5px 3.5px 0px var(--border);
+  background: #fde047;
+}
+.btn-apply-preset:active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0 0 0 transparent;
+}
+
+/* Badges for compensated slot and finish */
+.slot-compensated-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #fef08a;
+  color: #854d0e;
+  border: 1.5px solid #ca8a04;
+}
+.compensated-finish-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1.5px solid #16a34a;
+  letter-spacing: 0.3px;
+}
+.text-compensated {
+  color: #15803d;
+  font-weight: 700;
 }
 .option-bullet {
   color: #f59e0b;
@@ -2577,6 +2837,109 @@ h2 {
   gap: 22px;
 }
 
+/* Weekly Summary Card (Gamification & Discipline) */
+.weekly-summary-card {
+  background: #fffbeb;
+  border: var(--border-width) solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.weekly-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.weekly-badge-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--accent-break);
+  color: var(--accent-break-text);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
+}
+.weekly-text-group {
+  display: flex;
+  flex-direction: column;
+}
+.weekly-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.weekly-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+.weekly-title strong {
+  color: var(--text-main);
+}
+.discipline-tag {
+  color: #047857;
+  background: #d1fae5;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1.5px solid #10b981;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.weekly-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.weekly-card-right {
+  flex-shrink: 0;
+}
+.discipline-meter-box {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 14px;
+  text-align: center;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+.discipline-pct {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 900;
+  color: #047857;
+  line-height: 1.1;
+}
+.discipline-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* KPI row */
 .analytics-kpis {
   display: grid;
@@ -3370,6 +3733,135 @@ h2 {
   color: #FFD84D;
 }
 
+/* Dark Mode: Offline Sync Badge */
+[data-theme="dark"] .offline-sync-badge {
+  background: #2b1f0c;
+  border-color: #FFC15A;
+  color: #FFD84D;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .amber-dot {
+  background: #FFC15A;
+  border-color: #FFD84D;
+}
+[data-theme="dark"] .sync-now-btn {
+  background: #171717;
+  border-color: #FFC15A;
+  color: #FFD84D;
+  box-shadow: 1px 1px 0px #000000;
+}
+[data-theme="dark"] .sync-now-btn:hover {
+  background: #33240e;
+}
+
+/* Dark Mode: Streak Gamification Badge */
+[data-theme="dark"] .streak-badge {
+  background: #23160a;
+  border-color: #FF8F3D;
+  color: #FFD84D;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .streak-badge.active {
+  background: #2b1708;
+  border-color: #FF6B35;
+  color: #FFC15A;
+}
+[data-theme="dark"] .streak-badge-text small {
+  color: #B8B8B8;
+}
+
+/* Dark Mode: 1-Tap Compensation Controls */
+[data-theme="dark"] .btn-undo-compensation {
+  background: #202020;
+  border-color: #444444;
+  color: #F5F1E8;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .btn-undo-compensation:hover {
+  background: #3a1c21;
+  color: #FF6B6B;
+  border-color: #FF6B6B;
+}
+[data-theme="dark"] .compensation-applied-banner {
+  background: #11281b;
+  border-color: #78E6A0;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .applied-pill {
+  color: #78E6A0;
+}
+[data-theme="dark"] .applied-zap-icon {
+  color: #78E6A0;
+}
+[data-theme="dark"] .btn-undo-link {
+  background: #1a1a1a;
+  border-color: #78E6A0;
+  color: #78E6A0;
+  box-shadow: 1px 1px 0px #000000;
+}
+[data-theme="dark"] .btn-undo-link:hover {
+  background: #3a1c21;
+  color: #FF6B6B;
+  border-color: #FF6B6B;
+}
+[data-theme="dark"] .btn-apply-preset {
+  background: #FFD84D;
+  color: #121212;
+  border-color: #000000;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .btn-apply-preset:hover {
+  background: #FFE066;
+}
+[data-theme="dark"] .slot-compensated-badge {
+  background: #33270e;
+  border-color: #FFD84D;
+  color: #FFD84D;
+}
+[data-theme="dark"] .compensated-finish-badge {
+  background: #153322;
+  border-color: #78E6A0;
+  color: #78E6A0;
+}
+[data-theme="dark"] .text-compensated {
+  color: #78E6A0;
+}
+
+/* Dark Mode: Weekly Summary Card */
+[data-theme="dark"] .weekly-summary-card {
+  background: #251d10;
+  border-color: #3E3E3E;
+  box-shadow: 4px 4px 0px #000000;
+}
+[data-theme="dark"] .weekly-badge-icon {
+  background: #FFD84D;
+  color: #121212;
+  border-color: #000000;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .weekly-title {
+  color: #F5F1E8;
+}
+[data-theme="dark"] .discipline-tag {
+  color: #78E6A0;
+  background: #142a1d;
+  border-color: #78E6A0;
+}
+[data-theme="dark"] .weekly-sub {
+  color: #B8B8B8;
+}
+[data-theme="dark"] .discipline-meter-box {
+  background: #1e1e1e;
+  border-color: #383838;
+  box-shadow: 2px 2px 0px #000000;
+}
+[data-theme="dark"] .discipline-pct {
+  color: #78E6A0;
+}
+[data-theme="dark"] .discipline-label {
+  color: #888888;
+}
+
 /* Punch Action Buttons */
 [data-theme="dark"] .action-button {
   border-color: #080808;
@@ -3819,6 +4311,41 @@ footer {
     flex-direction: column;
     padding: 22px 0 16px;
     gap: 14px;
+  }
+  .offline-sync-badge {
+    padding: 4px 8px;
+    font-size: 10px;
+    min-height: 32px;
+  }
+  .date-streak-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .weekly-summary-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    gap: 14px;
+  }
+  .weekly-card-right {
+    width: 100%;
+  }
+  .discipline-meter-box {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 14px;
+  }
+  .compensation-option-pill.with-apply-action {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .btn-apply-preset {
+    width: 100%;
+    justify-content: center;
+    padding: 7px;
   }
   h1 {
     font-size: 34px;
