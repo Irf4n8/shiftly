@@ -33,9 +33,9 @@ function doPost(e) {
 
     if (action === "GET_TODAY") {
       const now = new Date();
-      const dateKey = dateKey_(now);
+      const todayStr = dateKey_(now);
       const allEvents = readEvents_(ss);
-      const events = allEvents.filter(row => row.date === dateKey);
+      const events = allEvents.filter(row => isSameDay_(row.timestamp, todayStr));
       const history = buildDailyHistory_(allEvents);
       return json_({ ok: true, events: events, history: history });
     }
@@ -81,7 +81,7 @@ function doPost(e) {
         sheet.getRange(targetRowIndex, 2).setValue(dateKey);
 
         const now = new Date();
-        const updatedEvents = readEvents_(ss).filter(row => row.date === dateKey);
+        const updatedEvents = readEvents_(ss).filter(row => isSameDay_(row.timestamp, dateKey));
         const updatedSummary = summarize_(updatedEvents, now.getTime());
         upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
 
@@ -109,18 +109,18 @@ function doPost(e) {
 
         const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
         let targetRowIndex = -1;
-        let eventDate = "";
+        let eventTimestamp = "";
         for (let i = 0; i < values.length; i++) {
           if (sessionId && String(values[i][3]) === sessionId) {
             targetRowIndex = i + 2;
-            eventDate = String(values[i][1]);
+            eventTimestamp = values[i][0];
             break;
           }
           if (originalTimestamp) {
             const rowIso = values[i][0] instanceof Date ? values[i][0].toISOString() : new Date(values[i][0]).toISOString();
             if (rowIso === originalTimestamp) {
               targetRowIndex = i + 2;
-              eventDate = String(values[i][1]);
+              eventTimestamp = values[i][0];
               break;
             }
           }
@@ -133,8 +133,8 @@ function doPost(e) {
         sheet.deleteRow(targetRowIndex);
 
         const now = new Date();
-        const dateKey = eventDate || dateKey_(now);
-        const updatedEvents = readEvents_(ss).filter(row => row.date === dateKey);
+        const dateKey = dateKey_(eventTimestamp || now);
+        const updatedEvents = readEvents_(ss).filter(row => isSameDay_(row.timestamp, dateKey));
         const updatedSummary = summarize_(updatedEvents, now.getTime());
         upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
 
@@ -166,7 +166,7 @@ function doPost(e) {
 
       const dateKey = dateKey_(eventTime);
       const allEvents = readEvents_(ss);
-      const today = allEvents.filter(row => row.date === dateKey);
+      const today = allEvents.filter(row => isSameDay_(row.timestamp, dateKey));
       const state = summarize_(today, now.getTime());
 
       // Validate transitions unless force is requested
@@ -193,7 +193,7 @@ function doPost(e) {
         sessionId
       ]);
 
-      const updatedEvents = readEvents_(ss).filter(row => row.date === dateKey);
+      const updatedEvents = readEvents_(ss).filter(row => isSameDay_(row.timestamp, dateKey));
       const updatedSummary = summarize_(updatedEvents, now.getTime());
       upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
       return json_({
@@ -231,20 +231,31 @@ function ensureSheets_(ss) {
   daily.getRange(1, 1, 1, DAILY_HEADERS.length).setFontWeight("bold");
 }
 
+function isSameDay_(isoOrDate, targetDateKey) {
+  if (!isoOrDate) return false;
+  return dateKey_(isoOrDate) === targetDateKey;
+}
+
 function readEvents_(ss) {
   const sheet = ss.getSheetByName(EVENTS_SHEET);
   if (sheet.getLastRow() < 2) return [];
   const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HEADERS.length).getValues();
   return values.filter(row => row[0]).map(row => {
+    let dateObj = null;
     let iso = "";
     try {
-      iso = row[0] instanceof Date ? row[0].toISOString() : new Date(row[0]).toISOString();
+      dateObj = row[0] instanceof Date ? row[0] : new Date(row[0]);
+      iso = dateObj.toISOString();
     } catch (e) {
-      iso = new Date().toISOString();
+      dateObj = new Date();
+      iso = dateObj.toISOString();
     }
+
+    const dKey = dateKey_(dateObj);
+
     return {
       timestamp: iso,
-      date: String(row[1] || ""),
+      date: dKey,
       action: String(row[2] || ""),
       sessionId: String(row[3] || "")
     };
@@ -315,7 +326,7 @@ function upsertDailySummary_(ss, dateKey, events, summary, now) {
   const last = sheet.getLastRow();
   let targetRow = 0;
   if (last >= 2) {
-    const dates = sheet.getRange(2, 1, last - 1, 1).getDisplayValues().flat();
+    const dates = sheet.getRange(2, 1, last - 1, 1).getValues().flat().map(v => dateKey_(v));
     const idx = dates.findIndex(value => value === dateKey);
     if (idx >= 0) targetRow = idx + 2;
   }
@@ -329,8 +340,9 @@ function upsertDailySummary_(ss, dateKey, events, summary, now) {
 function buildDailyHistory_(events) {
   const byDate = {};
   events.forEach(event => {
-    if (!byDate[event.date]) byDate[event.date] = [];
-    byDate[event.date].push(event);
+    const dKey = dateKey_(event.timestamp);
+    if (!byDate[dKey]) byDate[dKey] = [];
+    byDate[dKey].push(event);
   });
   return Object.keys(byDate).sort().reverse().slice(0, 31).map(date => {
     const rows = byDate[date];
@@ -347,8 +359,12 @@ function buildDailyHistory_(events) {
 }
 
 function dateKey_(date) {
-  return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
 }
+
 function messageFor_(action) {
   return {
     START_WORK: "Work started. Your punch-in is saved.",
@@ -357,6 +373,7 @@ function messageFor_(action) {
     END_DAY: "Day completed. Your attendance is saved."
   }[action] || "Saved.";
 }
+
 function json_(value) {
   return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);
 }
