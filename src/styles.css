@@ -1522,6 +1522,139 @@ h2 {
   margin-top: 6px;
 }
 
+/* =========================================================================
+   Shiftly Icon Loading & Shared-Element Docking Animation
+   ========================================================================= */
+.boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--bg);
+  background-image: radial-gradient(var(--bg-pattern-color) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.boot-overlay.fading-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-icon-wrapper {
+  position: fixed;
+  top: calc(50% - 32px);
+  left: calc(50% - 32px);
+  width: 64px;
+  height: 64px;
+  z-index: 100000;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+.boot-brand-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--accent-work);
+  color: #ffffff;
+  border: var(--border-heavy) solid var(--border);
+  box-shadow: var(--shadow-xl);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.boot-brand-badge.charging {
+  animation: bootBadgePulse 1s infinite ease-in-out;
+}
+
+.boot-zap-icon {
+  animation: bootZapSpark 1s infinite ease-in-out;
+}
+
+@keyframes bootBadgePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: var(--shadow-lg);
+  }
+  50% {
+    transform: scale(1.08) translateY(-3px);
+    box-shadow: var(--shadow-xl);
+  }
+}
+
+@keyframes bootZapSpark {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px transparent);
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 16px #60a5fa);
+  }
+}
+
+.boot-meta-wrap {
+  position: fixed;
+  top: calc(50% + 46px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+.boot-meta-wrap.fading-meta {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.boot-brand-name {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: -0.6px;
+  color: var(--text-main);
+}
+.boot-accent {
+  color: var(--accent-work);
+}
+
+.boot-charge-track {
+  width: 110px;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+.boot-charge-bar {
+  height: 100%;
+  background: var(--accent-work);
+  animation: bootChargeProgress 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bootChargeProgress {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}
+
+@keyframes brandDockSettle {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.brand-mark.just-docked {
+  animation: brandDockSettle 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
 /* =========================================================================
    Shift Analytics Dashboard & Neo-Brutalist Graph

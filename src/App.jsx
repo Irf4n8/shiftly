@@ -258,6 +258,61 @@ function AirportBoardTimer({ seconds = 0, shuffleKey = 0, onShuffle }) {
   );
 }
 
+function ShiftlyBootLoader({ targetRef, onFinish }) {
+  const [phase, setPhase] = useState("charging"); // "charging" -> "flying" -> "done"
+  const [flyStyle, setFlyStyle] = useState({});
+
+  useEffect(() => {
+    // Phase 1: High-energy charging pulse for 850ms
+    const t1 = setTimeout(() => {
+      if (targetRef && targetRef.current) {
+        const rect = targetRef.current.getBoundingClientRect();
+        const startX = window.innerWidth / 2;
+        const startY = window.innerHeight / 2;
+        const targetX = rect.left + rect.width / 2;
+        const targetY = rect.top + rect.height / 2;
+        const deltaX = targetX - startX;
+        const deltaY = targetY - startY;
+        const scale = rect.width / 64;
+
+        setFlyStyle({
+          transform: `translate(${deltaX}px, ${deltaY}px) scale(${scale})`,
+          transition: "transform 0.62s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.62s ease",
+        });
+      }
+      setPhase("flying");
+    }, 850);
+
+    // Phase 2: Complete flight and dock into place after 1500ms
+    const t2 = setTimeout(() => {
+      setPhase("done");
+      if (onFinish) onFinish();
+    }, 1500);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [targetRef, onFinish]);
+
+  if (phase === "done") return null;
+
+  return (
+    <div className={`boot-overlay ${phase === "flying" ? "fading-out" : ""}`} aria-hidden="true">
+      <div className="boot-icon-wrapper" style={flyStyle}>
+        <div className={`boot-brand-badge ${phase === "charging" ? "charging" : "docking"}`}>
+          <Zap size={30} className="boot-zap-icon" />
+        </div>
+      </div>
+      <div className={`boot-meta-wrap ${phase === "flying" ? "fading-meta" : ""}`}>
+        <span className="boot-brand-name">Shift<span className="boot-accent">ly</span></span>
+        <div className="boot-charge-track">
+          <div className="boot-charge-bar" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0 }) {
   const [selectedDay, setSelectedDay] = useState(null);
@@ -458,6 +513,16 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [connected, setConnected] = useState(false);
   const [shuffleKey, setShuffleKey] = useState(0);
+  const brandMarkRef = useRef(null);
+  const [showBootLoader, setShowBootLoader] = useState(true);
+  const [justDocked, setJustDocked] = useState(false);
+
+  const handleBootFinish = useCallback(() => {
+    setShowBootLoader(false);
+    setJustDocked(true);
+    setTimeout(() => setJustDocked(false), 500);
+  }, []);
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("shiftly_theme") || "light";
   });
@@ -790,9 +855,10 @@ export default function App() {
   if (!authenticated || !accessCode) {
     return (
       <main className="shell auth-shell">
+        {showBootLoader && <ShiftlyBootLoader targetRef={brandMarkRef} onFinish={handleBootFinish} />}
         <header className="topbar">
           <a className="brand" href="/" aria-label="Shiftly home">
-            <span className="brand-mark"><Zap size={18} /></span>
+            <span className={`brand-mark ${justDocked ? "just-docked" : ""}`} ref={brandMarkRef}><Zap size={18} /></span>
             <span>Shift<span className="brand-accent">ly</span></span>
           </a>
           <div className="topbar-right">
@@ -828,9 +894,10 @@ export default function App() {
 
   return (
     <main className="shell">
+      {showBootLoader && <ShiftlyBootLoader targetRef={brandMarkRef} onFinish={handleBootFinish} />}
       <header className="topbar">
         <a className="brand" href="/" aria-label="Shiftly home">
-          <span className="brand-mark"><Zap size={18} /></span>
+          <span className={`brand-mark ${justDocked ? "just-docked" : ""}`} ref={brandMarkRef}><Zap size={18} /></span>
           <span>Shift<span className="brand-accent">ly</span></span>
         </a>
         <div className="topbar-right">
