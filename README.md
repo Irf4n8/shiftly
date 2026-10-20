@@ -106,7 +106,7 @@ Deploying to Vercel provides HTTPS hosting and protects your backend secrets thr
 | :--- | :--- | :--- |
 | `APPS_SCRIPT_URL` | The Web App URL ending in `/exec` from Step 1.7 | `https://script.google.com/macros/s/.../exec` |
 | `APPS_SCRIPT_SECRET` | The exact same value you entered in Apps Script `API_SECRET` | `shiftly_secret_9843729184712` |
-| `APP_ACCESS_CODE` | A private PIN/password you will enter to unlock the dashboard | `office2026` or `my_secure_pin_789` |
+| `APP_ACCESS_CODE` | A private PIN/password you will enter to unlock the dashboard | `your_secret_pin_here` |
 
 6. Click **Deploy**.
 7. In ~30 seconds, Vercel will provide your live URL (e.g. `https://your-shiftly.vercel.app`).
