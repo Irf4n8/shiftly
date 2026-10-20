@@ -679,6 +679,56 @@ h1 span {
   margin-left: 4px;
 }
 
+.work-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.goal-achieved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #10B981;
+  color: #000000;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: var(--border-width) solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  animation: pulseGoalBadge 2s infinite ease-in-out;
+}
+
+.goal-achieved-badge:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.goal-achieved-badge:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+[data-theme="dark"] .goal-achieved-badge {
+  background: #10B981;
+  color: #000000;
+  border-color: #000000;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+@keyframes pulseGoalBadge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
 .target-line {
   color: var(--text-muted);
   font-size: 13px;
@@ -687,6 +737,15 @@ h1 span {
 }
 .target-line strong {
   color: var(--text-main);
+}
+
+.target-reached-highlight {
+  color: #059669 !important;
+  font-weight: 800;
+}
+
+[data-theme="dark"] .target-reached-highlight {
+  color: #34D399 !important;
 }
 
 .hero-icon {
@@ -700,6 +759,19 @@ h1 span {
   border: var(--border-width) solid var(--border);
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.hero-icon.celebrate {
+  background: #10B981;
+  color: #000000;
+  animation: celebrateIconBounce 1.4s infinite alternate ease-in-out;
+  cursor: pointer;
+}
+
+@keyframes celebrateIconBounce {
+  0% { transform: rotate(-6deg) scale(1); }
+  100% { transform: rotate(6deg) scale(1.08); }
 }
 
 /* Brutalist Progress Track */
@@ -726,6 +798,17 @@ h1 span {
   transition: width .3s ease;
 }
 
+.progress-fill.goal-complete {
+  background: repeating-linear-gradient(
+    -45deg,
+    #10B981,
+    #10B981 12px,
+    #059669 12px,
+    #059669 24px
+  );
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+}
+
 .progress-caption {
   display: flex;
   justify-content: space-between;
@@ -735,6 +818,193 @@ h1 span {
   font-size: 12px;
   font-weight: 700;
   margin-top: 10px;
+}
+
+/* Quick Wrap Up / Punch Out Callout */
+.goal-achieved-callout {
+  margin-top: 18px;
+  background: #ECFDF5;
+  border: var(--border-width) solid #10B981;
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+[data-theme="dark"] .goal-achieved-callout {
+  background: #064E3B;
+  border-color: #10B981;
+}
+
+.goal-callout-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.goal-trophy {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.goal-callout-info strong {
+  display: block;
+  font-size: 14px;
+  color: #065F46;
+  font-weight: 800;
+}
+
+[data-theme="dark"] .goal-callout-info strong {
+  color: #A7F3D0;
+}
+
+.goal-callout-info span {
+  display: block;
+  font-size: 12px;
+  color: #047857;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .goal-callout-info span {
+  color: #6EE7B7;
+}
+
+.goal-punchout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #10B981;
+  color: #000000;
+  border: var(--border-width) solid #000000;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  cursor: pointer;
+  box-shadow: 3px 3px 0px #000000;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  white-space: nowrap;
+}
+
+.goal-punchout-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.goal-punchout-btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+/* =========================================================================
+   Neo-Brutalist Confetti Celebration Overlay
+   ========================================================================= */
+.confetti-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+  overflow: hidden;
+}
+
+.confetti-toast {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #FFE600;
+  color: #000000;
+  border: 3px solid #000000;
+  border-radius: 12px;
+  padding: 12px 20px;
+  box-shadow: 5px 5px 0px #000000;
+  max-width: 90vw;
+  width: 440px;
+  animation: slideDownConfettiToast 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme="dark"] .confetti-toast {
+  background: #FFE600;
+  color: #000000;
+  border-color: #000000;
+}
+
+@keyframes slideDownConfettiToast {
+  from { opacity: 0; transform: translate(-50%, -24px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.confetti-trophy {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.confetti-toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.confetti-toast-content strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.confetti-toast-content span {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.confetti-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: grid;
+  place-items: center;
+  color: #000000;
+}
+
+.confetti-particle {
+  position: absolute;
+  top: -20px;
+  border: 2px solid #000000;
+  animation: confettiFall linear forwards;
+}
+
+.confetti-particle.circle {
+  border-radius: 50%;
+}
+
+.confetti-particle.square {
+  border-radius: 2px;
+}
+
+@keyframes confettiFall {
+  0% {
+    top: -20px;
+    transform: rotate(0deg) scale(0.8);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    top: 105vh;
+    transform: rotate(var(--rot, 360deg)) scale(1.1);
+    opacity: 0;
+  }
 }
 
 .hero-divider {

@@ -525,6 +525,49 @@ function sendBreakNotification(title, body) {
   }
 }
 
+function playCelebrationChime() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+    
+    // Neo-Brutalist celebratory arpeggio chime: C5 (523Hz), E5 (659Hz), G5 (784Hz), C6 (1046Hz)
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+      gain.gain.setValueAtTime(0, now + idx * 0.11);
+      gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.11 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.11);
+      osc.stop(now + idx * 0.11 + 0.5);
+    });
+  } catch (e) {
+    // AudioContext blocked until user interaction, safe to ignore
+  }
+}
+
+function sendGoalNotification(title, body) {
+  if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(title, {
+        body,
+        icon: "/favicon.png",
+        badge: "/favicon.png",
+        tag: "shiftly-goal-achieved",
+        vibrate: [300, 150, 300, 150, 500]
+      });
+    } catch (e) {}
+  }
+}
+
+
 function formatDate(date = new Date()) {
   return date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
@@ -808,6 +851,59 @@ function ShiftlyBootLoader({ targetRef, onFinish }) {
           <div className="boot-charge-bar" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function GoalConfettiBurst({ onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (onDismiss) onDismiss();
+    }, 4500);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  const particles = useMemo(() => {
+    const colors = ["#FFE600", "#00F0FF", "#FF3366", "#00E575", "#8C52FF", "#FF9900"];
+    return Array.from({ length: 36 }).map((_, i) => ({
+      id: i,
+      left: `${(i * 2.7 + Math.random() * 4).toFixed(1)}%`,
+      delay: `${(Math.random() * 0.7).toFixed(2)}s`,
+      duration: `${(2.2 + Math.random() * 1.5).toFixed(2)}s`,
+      size: `${Math.floor(8 + Math.random() * 10)}px`,
+      color: colors[i % colors.length],
+      rotate: `${Math.floor(Math.random() * 360)}deg`,
+      isCircle: i % 3 === 0,
+    }));
+  }, []);
+
+  return (
+    <div className="confetti-overlay" onClick={onDismiss} title="Click to dismiss celebration">
+      <div className="confetti-toast">
+        <span className="confetti-trophy">🏆</span>
+        <div className="confetti-toast-content">
+          <strong>8-Hour Target Completed!</strong>
+          <span>You've hit your required shift hours today. Fantastic discipline!</span>
+        </div>
+        <button type="button" className="confetti-close-btn" onClick={onDismiss} aria-label="Close">
+          <X size={15} />
+        </button>
+      </div>
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          className={`confetti-particle ${p.isCircle ? "circle" : "square"}`}
+          style={{
+            left: p.left,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            "--rot": p.rotate,
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -1603,6 +1699,39 @@ export default function App() {
     }
   }, []);
 
+  // 8-Hour Daily Goal Reached Celebration Milestone
+  const [showGoalBurst, setShowGoalBurst] = useState(false);
+  const fired8hAlertRef = useRef(false);
+
+  const triggerGoalCelebration = useCallback((isManualTest = false) => {
+    triggerVibrate([300, 150, 300, 150, 500]);
+    playCelebrationChime();
+    sendGoalNotification(
+      "🎉 Shiftly: 8-Hour Goal Reached!",
+      "Congratulations! You completed your 8-hour daily work target. Ready to wrap up or punch out."
+    );
+    setShowGoalBurst(true);
+    setNotice(isManualTest ? "🎉 Replaying 8-Hour Goal Celebration!" : "🎉 8-Hour Daily Target Completed! Outstanding work today.");
+  }, []);
+
+  // Automatic trigger the exact moment summary.workSeconds reaches TARGET_SECONDS
+  useEffect(() => {
+    if (summary.status === "NOT_STARTED") return;
+
+    const todayStr = todayKey();
+    const storageKey = `shiftly_8h_goal_${todayStr}`;
+    const alreadyFiredToday = localStorage.getItem(storageKey) === "true";
+
+    if (summary.workSeconds >= TARGET_SECONDS && !fired8hAlertRef.current && !alreadyFiredToday) {
+      fired8hAlertRef.current = true;
+      try {
+        localStorage.setItem(storageKey, "true");
+      } catch (e) {}
+      triggerGoalCelebration(false);
+    }
+  }, [summary.workSeconds, summary.status, triggerGoalCelebration]);
+
+
   async function login(event) {
     event.preventDefault();
     setBusy(true);
@@ -1930,6 +2059,7 @@ export default function App() {
   return (
     <main className="shell">
       {showBootLoader && <ShiftlyBootLoader targetRef={brandMarkRef} onFinish={handleBootFinish} />}
+      {showGoalBurst && <GoalConfettiBurst onDismiss={() => setShowGoalBurst(false)} />}
       <header className="topbar">
         <a className="brand" href="/" aria-label="Shiftly home">
           <span className={`brand-mark ${justDocked ? "just-docked" : ""}`} ref={brandMarkRef}><Zap size={18} /></span>
@@ -1999,18 +2129,74 @@ export default function App() {
       <section className="hero-card">
         <div className="hero-head">
           <div className="hero-head-left">
-            <p className="muted-label">ACTUAL WORK TIME</p>
+            <div className="work-label-row">
+              <p className="muted-label">ACTUAL WORK TIME</p>
+              {summary.workSeconds >= TARGET_SECONDS && (
+                <button
+                  type="button"
+                  className="goal-achieved-badge"
+                  onClick={() => triggerGoalCelebration(true)}
+                  title="Click to replay 8-hour celebration chime & animation"
+                >
+                  <Sparkles size={12} />
+                  <span>8h Goal Reached!</span>
+                </button>
+              )}
+            </div>
             <AirportBoardTimer
               seconds={summary.workSeconds}
               shuffleKey={shuffleKey}
               onShuffle={() => setShuffleKey((k) => k + 1)}
             />
-            <p className="target-line">Daily target: <strong>8 hours</strong> required</p>
+            <p className="target-line">
+              {summary.workSeconds >= TARGET_SECONDS ? (
+                <strong className="target-reached-highlight">
+                  🎉 8-hour target completed! Ready to punch out.
+                </strong>
+              ) : (
+                <>Daily target: <strong>8 hours</strong> required ({formatDuration(workRemaining)} remaining)</>
+              )}
+            </p>
           </div>
-          <div className="hero-icon" title="Split-flap live flight board"><Timer size={27} /></div>
+          <div
+            className={`hero-icon ${summary.workSeconds >= TARGET_SECONDS ? "celebrate" : ""}`}
+            title={summary.workSeconds >= TARGET_SECONDS ? "8h Goal Met! Click to celebrate" : "Split-flap live flight board"}
+            onClick={summary.workSeconds >= TARGET_SECONDS ? () => triggerGoalCelebration(true) : undefined}
+          >
+            {summary.workSeconds >= TARGET_SECONDS ? <Sparkles size={27} /> : <Timer size={27} />}
+          </div>
         </div>
-        <div className="progress-track"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
-        <div className="progress-caption"><span>{Math.round(progress)}% complete</span><span>{workRemaining > 0 ? `${formatDuration(workRemaining)} to go` : "Target reached"}</span></div>
+        <div className="progress-track">
+          <div
+            className={`progress-fill ${summary.workSeconds >= TARGET_SECONDS ? "goal-complete" : ""}`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="progress-caption">
+          <span>{Math.round(progress)}% complete</span>
+          <span>{workRemaining > 0 ? `${formatDuration(workRemaining)} to go` : "🎯 Target reached!"}</span>
+        </div>
+
+        {/* 1-Tap Quick Wrap Up / Punch Out Prompt when goal is hit and still working */}
+        {summary.workSeconds >= TARGET_SECONDS && summary.status === "IN_PROGRESS" && (
+          <div className="goal-achieved-callout">
+            <div className="goal-callout-info">
+              <span className="goal-trophy">🏆</span>
+              <div>
+                <strong>8-Hour Shift Goal Accomplished!</strong>
+                <span>You have satisfied your workday hours. Ready to punch out?</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="goal-punchout-btn"
+              onClick={() => handlePunch("END_DAY")}
+              disabled={loading || busy}
+            >
+              <ArrowDownToLine size={14} /> Punch Out Now
+            </button>
+          </div>
+        )}
         <div className="hero-divider" />
         <div className="hero-bottom">
           <div>
