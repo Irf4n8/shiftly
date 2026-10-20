@@ -1,6 +1,6 @@
-# OfficeTime — personal attendance tracker
+# Shiftly — smart workday & shift attendance tracker
 
-OfficeTime records your manual punch-in, breaks, resume-work, and end-of-day events. It calculates actual work time from timestamps, uses a daily target of **8 hours of work**, and a combined daily break allowance of **60 minutes** (15-minute break + 30-minute lunch + 15-minute break).
+Shiftly records your manual punch-in, breaks, resume-work, and end-of-day events. It calculates actual work time from timestamps, uses a daily target of **8 hours of work**, and a combined daily break allowance of **60 minutes** (15-minute break + 30-minute lunch + 15-minute break).
 
 Break times are flexible. The 15/30/15 split is displayed as a guide; the app does not enforce fixed times or prevent a break from exceeding its planned duration.
 

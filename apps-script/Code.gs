@@ -1,5 +1,5 @@
 /**
- * OfficeTime Google Apps Script backend.
+ * Shiftly Google Apps Script backend.
  *
  * Performance-optimized:
  * - Minimizes SpreadsheetApp API calls and redundant sheet reads

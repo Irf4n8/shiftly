@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
-  Edit2, Trash2, Plus, X, Clock
+  Edit2, Trash2, Plus, X, Clock, Zap
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -119,9 +119,9 @@ function summarize(events, nowMs = Date.now()) {
 }
 
 export default function App() {
-  const [accessCode, setAccessCode] = useState(() => sessionStorage.getItem("officetime_access") || "");
+  const [accessCode, setAccessCode] = useState(() => sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access") || "");
   const [codeInput, setCodeInput] = useState("");
-  const [authenticated, setAuthenticated] = useState(() => Boolean(sessionStorage.getItem("officetime_access")));
+  const [authenticated, setAuthenticated] = useState(() => Boolean(sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access")));
   const [events, setEvents] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -232,7 +232,7 @@ export default function App() {
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || "Could not verify access code.");
-      sessionStorage.setItem("officetime_access", codeInput);
+      sessionStorage.setItem("shiftly_access", codeInput);
       setAccessCode(codeInput);
       setAuthenticated(true);
       setEvents(data.events || []);
@@ -248,6 +248,7 @@ export default function App() {
   }
 
   function logout() {
+    sessionStorage.removeItem("shiftly_access");
     sessionStorage.removeItem("officetime_access");
     setAccessCode("");
     setAuthenticated(false);
@@ -447,14 +448,14 @@ export default function App() {
     return (
       <main className="shell auth-shell">
         <header className="topbar">
-          <a className="brand" href="/" aria-label="OfficeTime home"><span className="brand-mark"><Clock3 size={20} /></span><span>Office<span className="brand-light">Time</span></span></a>
+          <a className="brand" href="/" aria-label="Shiftly home"><span className="brand-mark"><Zap size={18} /></span><span>Shift<span className="brand-accent">ly</span></span></a>
           <div className="connection offline"><WifiOff size={15} /><span>Private access</span></div>
         </header>
         <section className="auth-card">
-          <div className="brand-mark auth-mark"><Clock3 size={24} /></div>
-          <p className="eyebrow">PERSONAL ATTENDANCE</p>
+          <div className="brand-mark auth-mark"><Zap size={24} /></div>
+          <p className="eyebrow">SMART WORKDAY & SHIFT TRACKER</p>
           <h1>Welcome <span>back.</span></h1>
-          <p className="auth-copy">Enter your private access code to open your attendance dashboard.</p>
+          <p className="auth-copy">Enter your access code to open your Shiftly dashboard.</p>
           {error && <div className="alert error"><CircleAlert size={18} /><span>{error}</span></div>}
           <form onSubmit={login} className="auth-form">
             <label htmlFor="access-code">Access code</label>
@@ -463,7 +464,7 @@ export default function App() {
           </form>
           <p className="helper-note">Set APP_ACCESS_CODE in your Vercel environment variables before using the deployed app.</p>
         </section>
-        <footer><span>OfficeTime · Personal use</span><span>Private dashboard</span></footer>
+        <footer><span>Shiftly · Personal Workday Tracker</span><span>Private access</span></footer>
       </main>
     );
   }
@@ -471,9 +472,9 @@ export default function App() {
   return (
     <main className="shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="OfficeTime home">
-          <span className="brand-mark"><Clock3 size={20} /></span>
-          <span>Office<span className="brand-light">Time</span></span>
+        <a className="brand" href="/" aria-label="Shiftly home">
+          <span className="brand-mark"><Zap size={18} /></span>
+          <span>Shift<span className="brand-accent">ly</span></span>
         </a>
         <div className="topbar-right">
           <div className={`connection ${connected ? "online" : "offline"}`}>
@@ -486,8 +487,8 @@ export default function App() {
 
       <section className="intro">
         <div>
-          <p className="eyebrow">PERSONAL ATTENDANCE</p>
-          <h1>Your workday,<br /><span>under control.</span></h1>
+          <p className="eyebrow">SMART WORKDAY TRACKER</p>
+          <h1>Master your workday,<br /><span>shift by shift.</span></h1>
           <p className="date-line"><CalendarDays size={16} /> {formatDate()}</p>
         </div>
         <div className="status-pill">
@@ -789,8 +790,8 @@ export default function App() {
       )}
 
       <footer>
-        <span>OfficeTime <span className="footer-dot">·</span> Personal use</span>
-        <span>8h work target <span className="footer-dot">·</span> 1h break allowance</span>
+        <span>Shiftly <span className="footer-dot">·</span> Smart Workday Tracker</span>
+        <span>8h target <span className="footer-dot">·</span> 1h break allowance</span>
       </footer>
     </main>
   );
