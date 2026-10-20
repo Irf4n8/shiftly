@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
@@ -118,6 +118,165 @@ function summarize(events, nowMs = Date.now()) {
   return { status, workSeconds, breakSeconds, firstPunch, lastPunch };
 }
 
+const RANDOM_DIGITS = "0123456789";
+
+function AirportBoardTimer({ seconds = 0, shuffleKey = 0, onShuffle }) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const targetH = String(Math.floor(safe / 3600)).padStart(2, "0");
+  const targetM = String(Math.floor((safe % 3600) / 60)).padStart(2, "0");
+  const targetS = String(safe % 60).padStart(2, "0");
+  const targetDigits = [targetH[0], targetH[1], targetM[0], targetM[1], targetS[0], targetS[1]];
+
+  const [displayDigits, setDisplayDigits] = useState(targetDigits);
+  const [flippingFlags, setFlippingFlags] = useState([false, false, false, false, false, false]);
+
+  const targetRef = useRef(targetDigits);
+  targetRef.current = targetDigits;
+
+  const isShufflingRef = useRef(true);
+  const lockedSlotsRef = useRef([false, false, false, false, false, false]);
+
+  // Airport split-flap board shuffle animation when app opens or refresh is triggered
+  useEffect(() => {
+    isShufflingRef.current = true;
+    lockedSlotsRef.current = [false, false, false, false, false, false];
+
+    const lockDelays = [320, 500, 720, 940, 1180, 1400];
+    const timeouts = [];
+
+    // Rolling animation for unlocked slots
+    const rollInterval = setInterval(() => {
+      setDisplayDigits((prev) =>
+        prev.map((val, idx) => {
+          if (lockedSlotsRef.current[idx]) {
+            return targetRef.current[idx];
+          }
+          return RANDOM_DIGITS[Math.floor(Math.random() * RANDOM_DIGITS.length)];
+        })
+      );
+      setFlippingFlags((prev) => prev.map((_, idx) => !lockedSlotsRef.current[idx]));
+    }, 45);
+
+    // Staggered settling per digit slot
+    lockDelays.forEach((delay, idx) => {
+      const t = setTimeout(() => {
+        lockedSlotsRef.current[idx] = true;
+        setDisplayDigits((prev) => {
+          const next = [...prev];
+          next[idx] = targetRef.current[idx];
+          return next;
+        });
+        // Settle flip
+        setFlippingFlags((prev) => {
+          const next = [...prev];
+          next[idx] = true;
+          return next;
+        });
+        setTimeout(() => {
+          setFlippingFlags((prev) => {
+            const next = [...prev];
+            next[idx] = false;
+            return next;
+          });
+        }, 110);
+
+        if (idx === lockDelays.length - 1) {
+          isShufflingRef.current = false;
+          clearInterval(rollInterval);
+        }
+      }, delay);
+      timeouts.push(t);
+    });
+
+    return () => {
+      clearInterval(rollInterval);
+      timeouts.forEach(clearTimeout);
+    };
+  }, [shuffleKey]);
+
+  // Live ticking flips once the board is loaded
+  const prevDigitsRef = useRef(targetDigits);
+  useEffect(() => {
+    if (isShufflingRef.current) return;
+
+    setDisplayDigits(targetDigits);
+
+    const changed = targetDigits.map((val, idx) => val !== prevDigitsRef.current[idx]);
+    prevDigitsRef.current = targetDigits;
+
+    if (changed.some(Boolean)) {
+      setFlippingFlags((prev) => prev.map((_, idx) => changed[idx]));
+      const t = setTimeout(() => {
+        setFlippingFlags([false, false, false, false, false, false]);
+      }, 140);
+      return () => clearTimeout(t);
+    }
+  }, [targetH, targetM, targetS]);
+
+  return (
+    <div className="airport-board-wrapper" role="timer" aria-label={`Actual work time: ${targetH} hours ${targetM} minutes ${targetS} seconds`}>
+      <div className="airport-board-header">
+        <div className="airport-board-tag">
+          <span className="blinking-board-lamp" />
+          <span>DEPARTURES // ACTUAL WORK TIME</span>
+        </div>
+        <div className="airport-board-actions">
+          <span className="airport-board-flight">GATE 08H</span>
+          {onShuffle && (
+            <button
+              type="button"
+              className="board-replay-btn"
+              onClick={onShuffle}
+              title="Re-run split-flap flight board animation"
+            >
+              ↻ FLIP
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="airport-board-grid">
+        {/* Hours */}
+        <div className="flap-group">
+          <div className={`flap-tile ${flippingFlags[0] ? "flipping" : ""}`}>
+            <span className="flap-char">{displayDigits[0]}</span>
+          </div>
+          <div className={`flap-tile ${flippingFlags[1] ? "flipping" : ""}`}>
+            <span className="flap-char">{displayDigits[1]}</span>
+          </div>
+          <span className="flap-unit">H</span>
+        </div>
+
+        <span className="flap-separator">:</span>
+
+        {/* Minutes */}
+        <div className="flap-group">
+          <div className={`flap-tile ${flippingFlags[2] ? "flipping" : ""}`}>
+            <span className="flap-char">{displayDigits[2]}</span>
+          </div>
+          <div className={`flap-tile ${flippingFlags[3] ? "flipping" : ""}`}>
+            <span className="flap-char">{displayDigits[3]}</span>
+          </div>
+          <span className="flap-unit">M</span>
+        </div>
+
+        <span className="flap-separator">:</span>
+
+        {/* Seconds */}
+        <div className="flap-group">
+          <div className={`flap-tile ${flippingFlags[4] ? "flipping" : ""}`}>
+            <span className="flap-char">{displayDigits[4]}</span>
+          </div>
+          <div className={`flap-tile ${flippingFlags[5] ? "flipping" : ""}`}>
+            <span className="flap-char">{displayDigits[5]}</span>
+          </div>
+          <span className="flap-unit">S</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [accessCode, setAccessCode] = useState(() => sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access") || "");
   const [codeInput, setCodeInput] = useState("");
@@ -130,6 +289,7 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [now, setNow] = useState(Date.now());
   const [connected, setConnected] = useState(false);
+  const [shuffleKey, setShuffleKey] = useState(0);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("shiftly_theme") || "light";
   });
@@ -157,7 +317,10 @@ export default function App() {
   const [manualTimeInput, setManualTimeInput] = useState(() => getLocalTimeString());
 
   const refresh = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true);
+    if (!quiet) {
+      setLoading(true);
+      setShuffleKey((k) => k + 1);
+    }
     try {
       const response = await fetch("/api/attendance", {
         method: "POST",
@@ -542,12 +705,16 @@ export default function App() {
 
       <section className="hero-card">
         <div className="hero-head">
-          <div>
+          <div className="hero-head-left">
             <p className="muted-label">ACTUAL WORK TIME</p>
-            <div className="big-time">{formatDuration(summary.workSeconds)}</div>
-            <p className="target-line">of <strong>8 hours</strong> required</p>
+            <AirportBoardTimer
+              seconds={summary.workSeconds}
+              shuffleKey={shuffleKey}
+              onShuffle={() => setShuffleKey((k) => k + 1)}
+            />
+            <p className="target-line">Daily target: <strong>8 hours</strong> required</p>
           </div>
-          <div className="hero-icon"><Timer size={27} /></div>
+          <div className="hero-icon" title="Split-flap live flight board"><Timer size={27} /></div>
         </div>
         <div className="progress-track"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
         <div className="progress-caption"><span>{Math.round(progress)}% complete</span><span>{workRemaining > 0 ? `${formatDuration(workRemaining)} to go` : "Target reached"}</span></div>
