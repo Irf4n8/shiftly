@@ -119,8 +119,8 @@ If you want to run Shiftly on your local computer or make custom code changes:
 
 1. Clone your repository and install dependencies:
    ```bash
-   git clone https://github.com/your-username/officetime.git
-   cd officetime
+   git clone https://github.com/your-username/shiftly.git
+   cd shiftly
    npm install
    ```
 
