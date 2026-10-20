@@ -1,16 +1,12 @@
 /**
  * OfficeTime Google Apps Script backend.
  *
- * Before deploying:
- * 1. Create a Google Sheet.
- * 2. Open Extensions > Apps Script and paste this file.
- * 3. In Project Settings > Script Properties, add:
- *      API_SECRET = the same long random secret as Vercel APPS_SCRIPT_SECRET
- *      SPREADSHEET_ID = the ID from the Google Sheet URL
- * 4. Deploy > New deployment > Web app.
- *    Execute as: Me
- *    Who has access: Anyone
- * The public endpoint only accepts requests carrying the shared secret.
+ * Supports:
+ * - Real-time punches (START_WORK, START_BREAK, RESUME_WORK, END_DAY)
+ * - Custom punch-in timestamp (when you forget to punch in earlier)
+ * - Editing existing punch timestamps (EDIT_EVENT)
+ * - Deleting mistaken punches (DELETE_EVENT)
+ * - Automatic recalculation of Daily Summary and work/break times
  */
 
 const EVENTS_SHEET = "Events";
@@ -36,11 +32,121 @@ function doPost(e) {
     const action = String(payload.action || "");
 
     if (action === "GET_TODAY") {
-      const dateKey = dateKey_(new Date());
+      const now = new Date();
+      const dateKey = dateKey_(now);
       const allEvents = readEvents_(ss);
       const events = allEvents.filter(row => row.date === dateKey);
       const history = buildDailyHistory_(allEvents);
       return json_({ ok: true, events: events, history: history });
+    }
+
+    // Edit an existing punch timestamp
+    if (action === "EDIT_EVENT") {
+      const lock = LockService.getScriptLock();
+      lock.waitLock(10000);
+      try {
+        const sessionId = String(payload.sessionId || "");
+        const originalTimestamp = String(payload.originalTimestamp || "");
+        const newTimestamp = payload.timestamp ? new Date(payload.timestamp) : null;
+        if (!newTimestamp || isNaN(newTimestamp.getTime())) {
+          return json_({ ok: false, error: "Invalid timestamp provided." });
+        }
+
+        const sheet = ss.getSheetByName(EVENTS_SHEET);
+        const lastRow = sheet.getLastRow();
+        if (lastRow < 2) return json_({ ok: false, error: "No events found to edit." });
+
+        const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
+        let targetRowIndex = -1;
+        for (let i = 0; i < values.length; i++) {
+          if (sessionId && String(values[i][3]) === sessionId) {
+            targetRowIndex = i + 2;
+            break;
+          }
+          if (originalTimestamp) {
+            const rowIso = values[i][0] instanceof Date ? values[i][0].toISOString() : new Date(values[i][0]).toISOString();
+            if (rowIso === originalTimestamp) {
+              targetRowIndex = i + 2;
+              break;
+            }
+          }
+        }
+
+        if (targetRowIndex === -1) {
+          return json_({ ok: false, error: "Event not found in sheet." });
+        }
+
+        const dateKey = dateKey_(newTimestamp);
+        sheet.getRange(targetRowIndex, 1).setValue(newTimestamp);
+        sheet.getRange(targetRowIndex, 2).setValue(dateKey);
+
+        const now = new Date();
+        const updatedEvents = readEvents_(ss).filter(row => row.date === dateKey);
+        const updatedSummary = summarize_(updatedEvents, now.getTime());
+        upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
+
+        return json_({
+          ok: true,
+          message: "Punch time updated successfully.",
+          events: updatedEvents,
+          history: buildDailyHistory_(readEvents_(ss))
+        });
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    // Delete an accidental punch
+    if (action === "DELETE_EVENT") {
+      const lock = LockService.getScriptLock();
+      lock.waitLock(10000);
+      try {
+        const sessionId = String(payload.sessionId || "");
+        const originalTimestamp = String(payload.originalTimestamp || "");
+        const sheet = ss.getSheetByName(EVENTS_SHEET);
+        const lastRow = sheet.getLastRow();
+        if (lastRow < 2) return json_({ ok: false, error: "No events found to delete." });
+
+        const values = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues();
+        let targetRowIndex = -1;
+        let eventDate = "";
+        for (let i = 0; i < values.length; i++) {
+          if (sessionId && String(values[i][3]) === sessionId) {
+            targetRowIndex = i + 2;
+            eventDate = String(values[i][1]);
+            break;
+          }
+          if (originalTimestamp) {
+            const rowIso = values[i][0] instanceof Date ? values[i][0].toISOString() : new Date(values[i][0]).toISOString();
+            if (rowIso === originalTimestamp) {
+              targetRowIndex = i + 2;
+              eventDate = String(values[i][1]);
+              break;
+            }
+          }
+        }
+
+        if (targetRowIndex === -1) {
+          return json_({ ok: false, error: "Event not found in sheet." });
+        }
+
+        sheet.deleteRow(targetRowIndex);
+
+        const now = new Date();
+        const dateKey = eventDate || dateKey_(now);
+        const updatedEvents = readEvents_(ss).filter(row => row.date === dateKey);
+        const updatedSummary = summarize_(updatedEvents, now.getTime());
+        upsertDailySummary_(ss, dateKey, updatedEvents, updatedSummary, now);
+
+        return json_({
+          ok: true,
+          message: "Punch removed.",
+          events: updatedEvents,
+          history: buildDailyHistory_(readEvents_(ss))
+        });
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     const allowed = ["START_WORK", "START_BREAK", "RESUME_WORK", "END_DAY"];
@@ -52,27 +158,36 @@ function doPost(e) {
     lock.waitLock(10000);
     try {
       const now = new Date();
-      const dateKey = dateKey_(now);
+      // Allow custom past timestamp (e.g. if punch-in was forgotten)
+      const eventTime = payload.timestamp ? new Date(payload.timestamp) : now;
+      if (isNaN(eventTime.getTime())) {
+        return json_({ ok: false, error: "Invalid timestamp." });
+      }
+
+      const dateKey = dateKey_(eventTime);
       const allEvents = readEvents_(ss);
       const today = allEvents.filter(row => row.date === dateKey);
       const state = summarize_(today, now.getTime());
 
-      const transitions = {
-        START_WORK: state.status === "NOT_STARTED",
-        START_BREAK: state.status === "WORKING",
-        RESUME_WORK: state.status === "ON_BREAK",
-        END_DAY: state.status === "WORKING" || state.status === "ON_BREAK"
-      };
-      if (!transitions[action]) {
-        return json_({
-          ok: false,
-          error: "That action is not available in your current state. Refresh the page and try again."
-        });
+      // Validate transitions unless force is requested
+      if (!payload.force) {
+        const transitions = {
+          START_WORK: state.status === "NOT_STARTED",
+          START_BREAK: state.status === "WORKING",
+          RESUME_WORK: state.status === "ON_BREAK",
+          END_DAY: state.status === "WORKING" || state.status === "ON_BREAK"
+        };
+        if (!transitions[action]) {
+          return json_({
+            ok: false,
+            error: "That action is not available in your current state. You can edit previous punches or toggle custom time."
+          });
+        }
       }
 
-      const sessionId = dateKey + "-" + (today.length + 1);
+      const sessionId = dateKey + "-" + (today.length + 1) + "-" + new Date().getTime();
       ss.getSheetByName(EVENTS_SHEET).appendRow([
-        now,
+        eventTime,
         dateKey,
         action,
         sessionId
@@ -120,12 +235,20 @@ function readEvents_(ss) {
   const sheet = ss.getSheetByName(EVENTS_SHEET);
   if (sheet.getLastRow() < 2) return [];
   const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HEADERS.length).getValues();
-  return values.map(row => ({
-    timestamp: row[0] instanceof Date ? row[0].toISOString() : new Date(row[0]).toISOString(),
-    date: String(row[1]),
-    action: String(row[2]),
-    sessionId: String(row[3] || "")
-  })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  return values.filter(row => row[0]).map(row => {
+    let iso = "";
+    try {
+      iso = row[0] instanceof Date ? row[0].toISOString() : new Date(row[0]).toISOString();
+    } catch (e) {
+      iso = new Date().toISOString();
+    }
+    return {
+      timestamp: iso,
+      date: String(row[1] || ""),
+      action: String(row[2] || ""),
+      sessionId: String(row[3] || "")
+    };
+  }).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 }
 
 function summarize_(events, nowMs) {
@@ -142,7 +265,7 @@ function summarize_(events, nowMs) {
     if (!firstPunch) firstPunch = event.timestamp;
     lastPunch = event.timestamp;
 
-    if (event.action === "START_WORK" && status === "NOT_STARTED") {
+    if (event.action === "START_WORK") {
       status = "WORKING";
       workStartedAt = t;
     } else if (event.action === "START_BREAK" && status === "WORKING") {
