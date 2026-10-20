@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, Coffee, Clock3, CalendarDays,
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
-  Edit2, Trash2, Plus, X, Clock, Zap
+  Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -130,6 +130,18 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [now, setNow] = useState(Date.now());
   const [connected, setConnected] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("shiftly_theme") || "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("shiftly_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  };
 
   // Custom punch time state
   const [isCustomTimeOpen, setIsCustomTimeOpen] = useState(false);
@@ -448,8 +460,23 @@ export default function App() {
     return (
       <main className="shell auth-shell">
         <header className="topbar">
-          <a className="brand" href="/" aria-label="Shiftly home"><span className="brand-mark"><Zap size={18} /></span><span>Shift<span className="brand-accent">ly</span></span></a>
-          <div className="connection offline"><WifiOff size={15} /><span>Private access</span></div>
+          <a className="brand" href="/" aria-label="Shiftly home">
+            <span className="brand-mark"><Zap size={18} /></span>
+            <span>Shift<span className="brand-accent">ly</span></span>
+            <span className="brand-pill">NEO</span>
+          </a>
+          <div className="topbar-right">
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title={`Switch to ${theme === "light" ? "Dark" : "Light"} Neo-Brutalist mode`}
+            >
+              {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
+              <span>{theme === "light" ? "DARK" : "LIGHT"}</span>
+            </button>
+            <div className="connection offline"><WifiOff size={14} /><span>Private</span></div>
+          </div>
         </header>
         <section className="auth-card">
           <div className="brand-mark auth-mark"><Zap size={24} /></div>
@@ -464,7 +491,7 @@ export default function App() {
           </form>
           <p className="helper-note">Set APP_ACCESS_CODE in your Vercel environment variables before using the deployed app.</p>
         </section>
-        <footer><span>Shiftly · Personal Workday Tracker</span><span>Private access</span></footer>
+        <footer><span>Shiftly · Neo-Brutalist Attendance</span><span>Private access</span></footer>
       </main>
     );
   }
@@ -475,11 +502,21 @@ export default function App() {
         <a className="brand" href="/" aria-label="Shiftly home">
           <span className="brand-mark"><Zap size={18} /></span>
           <span>Shift<span className="brand-accent">ly</span></span>
+          <span className="brand-pill">NEO</span>
         </a>
         <div className="topbar-right">
+          <button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === "light" ? "Dark" : "Light"} Neo-Brutalist mode`}
+          >
+            {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
+            <span>{theme === "light" ? "DARK" : "LIGHT"}</span>
+          </button>
           <div className={`connection ${connected ? "online" : "offline"}`}>
-            {connected ? <Wifi size={15} /> : <WifiOff size={15} />}
-            <span>{connected ? "Sheets connected" : "Not connected"}</span>
+            {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
+            <span>{connected ? "Syncing Live" : "Offline"}</span>
           </div>
           <button className="logout-button" onClick={logout}>Lock</button>
         </div>
@@ -487,13 +524,16 @@ export default function App() {
 
       <section className="intro">
         <div>
-          <p className="eyebrow">SMART WORKDAY TRACKER</p>
+          <div className="eyebrow-badge">
+            <Sparkles size={13} />
+            <span>SMART SHIFT TRACKER</span>
+          </div>
           <h1>Master your workday,<br /><span>shift by shift.</span></h1>
-          <p className="date-line"><CalendarDays size={16} /> {formatDate()}</p>
+          <p className="date-line"><CalendarDays size={15} /> {formatDate()}</p>
         </div>
         <div className="status-pill">
           <span className={`status-dot ${summary.status.toLowerCase()}`} />
-          {statusCopy[0]}
+          <span className="status-pill-text">{statusCopy[0]}</span>
         </div>
       </section>
 
