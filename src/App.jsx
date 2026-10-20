@@ -21,12 +21,17 @@ function todayKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function formatDuration(seconds = 0) {
+function formatDuration(seconds = 0, alwaysShowSeconds = true) {
   const safe = Math.max(0, Math.floor(seconds));
   const h = Math.floor(safe / 3600);
   const m = Math.floor((safe % 3600) / 60);
   const s = safe % 60;
-  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+  if (h > 0) {
+    if (alwaysShowSeconds) {
+      return `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+    }
+    return `${h}h ${String(m).padStart(2, "0")}m`;
+  }
   return `${m}m ${String(s).padStart(2, "0")}s`;
 }
 
@@ -173,11 +178,18 @@ export default function App() {
   const breakRemaining = Math.max(0, BREAK_ALLOWANCE_SECONDS - summary.breakSeconds);
   const breakOver = Math.max(0, summary.breakSeconds - BREAK_ALLOWANCE_SECONDS);
   const progress = Math.min(100, (summary.workSeconds / TARGET_SECONDS) * 100);
+
+  // Planned finish includes 8h work + at least 1h (60 min) break allowance.
+  // If break exceeded 60 minutes, finish time extends by the extra minutes!
+  const effectiveBreakSeconds = Math.max(BREAK_ALLOWANCE_SECONDS, summary.breakSeconds);
+  const extraBreakSeconds = Math.max(0, summary.breakSeconds - BREAK_ALLOWANCE_SECONDS);
+  const extraBreakMinutes = Math.round(extraBreakSeconds / 60);
+
   const estimatedEnd = useMemo(() => {
     if (!summary.firstPunch || summary.status === "COMPLETED") return null;
     const start = new Date(summary.firstPunch).getTime();
-    return new Date(start + TARGET_SECONDS * 1000 + summary.breakSeconds * 1000);
-  }, [summary.firstPunch, summary.breakSeconds, summary.status]);
+    return new Date(start + TARGET_SECONDS * 1000 + effectiveBreakSeconds * 1000);
+  }, [summary.firstPunch, effectiveBreakSeconds, summary.status]);
 
   async function login(event) {
     event.preventDefault();
@@ -424,8 +436,26 @@ export default function App() {
         <div className="progress-caption"><span>{Math.round(progress)}% complete</span><span>{workRemaining > 0 ? `${formatDuration(workRemaining)} to go` : "Target reached"}</span></div>
         <div className="hero-divider" />
         <div className="hero-bottom">
-          <div><span className="small-label">Punched in</span><strong>{formatClock(summary.firstPunch)}</strong></div>
-          <div><span className="small-label">Estimated finish</span><strong>{estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—"}</strong></div>
+          <div>
+            <span className="small-label">Punched in</span>
+            <strong>{formatClock(summary.firstPunch)}</strong>
+          </div>
+          <div>
+            <span className="small-label">Estimated finish</span>
+            <div className="finish-time-row">
+              <strong>{estimatedEnd ? estimatedEnd.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "—"}</strong>
+              {extraBreakMinutes > 0 && (
+                <span className="extra-break-badge">+{extraBreakMinutes}m</span>
+              )}
+            </div>
+            <span className="finish-subtext">
+              {extraBreakMinutes > 0 ? (
+                <span className="text-danger">+{extraBreakMinutes}m extra break taken</span>
+              ) : (
+                <span>Includes 1h planned break</span>
+              )}
+            </span>
+          </div>
         </div>
       </section>
 

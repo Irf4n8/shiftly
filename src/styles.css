@@ -276,6 +276,35 @@ h1 span { color: var(--green); }
   font-variant-numeric: tabular-nums;
 }
 
+.finish-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.extra-break-badge {
+  background: rgba(255, 92, 77, 0.18);
+  color: #ff7e6c;
+  border: 1px solid rgba(255, 92, 77, 0.45);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+
+.finish-subtext {
+  font-size: 11px;
+  color: #8da090;
+  line-height: 1.3;
+}
+.finish-subtext .text-danger {
+  color: #ff7e6c;
+  font-weight: 600;
+}
+
 /* Metrics breakdown */
 .metrics-grid {
   display: grid;
