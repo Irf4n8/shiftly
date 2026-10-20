@@ -340,30 +340,42 @@ function summarize(events, nowMs = Date.now()) {
   let firstPunch = null;
   let lastPunch = null;
 
-  for (const event of events) {
+  const sortedEvents = [...(events || [])].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  for (const event of sortedEvents) {
     const t = new Date(event.timestamp).getTime();
     if (!Number.isFinite(t)) continue;
     if (!firstPunch) firstPunch = event.timestamp;
     lastPunch = event.timestamp;
 
     if (event.action === "START_WORK") {
+      if (status === "ON_BREAK" && breakStartedAt !== null) {
+        breakSeconds += Math.max(0, (t - breakStartedAt) / 1000);
+        breakStartedAt = null;
+      }
       status = "WORKING";
       workStartedAt = t;
-    } else if (event.action === "START_BREAK" && status === "WORKING") {
-      if (workStartedAt !== null) workSeconds += Math.max(0, (t - workStartedAt) / 1000);
+    } else if (event.action === "START_BREAK") {
+      if (workStartedAt !== null) {
+        workSeconds += Math.max(0, (t - workStartedAt) / 1000);
+      }
       workStartedAt = null;
       breakStartedAt = t;
       status = "ON_BREAK";
-    } else if (event.action === "RESUME_WORK" && status === "ON_BREAK") {
-      if (breakStartedAt !== null) breakSeconds += Math.max(0, (t - breakStartedAt) / 1000);
+    } else if (event.action === "RESUME_WORK") {
+      if (breakStartedAt !== null) {
+        breakSeconds += Math.max(0, (t - breakStartedAt) / 1000);
+      }
       breakStartedAt = null;
       workStartedAt = t;
       status = "WORKING";
     } else if (event.action === "END_DAY") {
-      if (status === "WORKING" && workStartedAt !== null) {
+      if (workStartedAt !== null) {
         workSeconds += Math.max(0, (t - workStartedAt) / 1000);
       }
-      if (status === "ON_BREAK" && breakStartedAt !== null) {
+      if (breakStartedAt !== null) {
         breakSeconds += Math.max(0, (t - breakStartedAt) / 1000);
       }
       workStartedAt = null;
@@ -745,7 +757,7 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
               </div>
               <div className="detail-stats">
                 <span className="stat-pill"><span className="legend-dot work-dot" /> Work: <b>{formatDuration(selectedDay.workSec)}</b></span>
-                <span className="stat-pill"><span className="legend-dot break-dot" /> Break: <b>{formatDuration(selectedDay.breakSec)}</b></span>
+                <span className="stat-pill"><span className="legend-dot break-dot" /> Break: <b>{selectedDay.breakSec > 0 ? formatDuration(selectedDay.breakSec) : "0m (None taken)"}</b></span>
                 <span className="stat-pill">Total: <b>{formatDuration(selectedDay.totalSec || (selectedDay.workSec + selectedDay.breakSec))}</b></span>
               </div>
             </div>
@@ -777,8 +789,10 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
                 <div className="shift-row-badge">
                   {d.hitTarget ? (
                     <span className="badge-hit">8h+ Goal Met</span>
-                  ) : (
+                  ) : d.breakSec > 0 ? (
                     <span className="badge-partial">{formatDuration(d.breakSec)} break</span>
+                  ) : (
+                    <span className="badge-partial">{d.isToday ? "No break yet" : "No break"}</span>
                   )}
                 </div>
               </div>
