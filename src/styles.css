@@ -1,48 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=JetBrains+Mono:wght@500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Rye&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 /* =========================================================================
-   SHIFTLY — NEO-BRUTALIST DESIGN SYSTEM
-   Bespoke, High-Contrast, Hyper-Tactile UI/UX
+   SHIFTLY — THREE-THEME NEO-BRUTALIST DESIGN SYSTEM
+   1. Light Mode — Clean Neo-Brutalism (#F5F1E8)
+   2. Dark Mode — Dark Neo-Brutalism (#171717)
+   3. Frontier Mode — Red Dead Redemption 2-inspired Western Neo-Brutalism (#171512)
    ========================================================================= */
 
 :root,
 [data-theme="light"] {
-  --bg: #f5f0e8;
-  --bg-pattern-color: #d8cebe;
-  --surface: #ffffff;
-  --surface-alt: #fffefb;
-  --surface-muted: #ece5d8;
-  --surface-highlight: #fef08a;
+  --bg: #F5F1E8;
+  --bg-pattern-color: #E2DACB;
+  --surface: #FFFFFF;
+  --surface-alt: #EAE4D8;
+  --surface-muted: #EAE4D8;
+  --surface-highlight: #FFF5CC;
 
-  --text-main: #050505;
-  --text-muted: #4b5563;
-  --text-dim: #6b7280;
+  --text-main: #171717;
+  --text-muted: #555555;
+  --text-dim: #777777;
 
-  --border: #000000;
+  --border: #171717;
   --border-width: 2.5px;
   --border-heavy: 3px;
-  --shadow-color: #000000;
+  --shadow-color: #171717;
 
-  /* Hard Offset Drop Shadows */
-  --shadow-xs: 2px 2px 0px #000000;
-  --shadow-sm: 3px 3px 0px #000000;
-  --shadow-md: 4px 4px 0px #000000;
-  --shadow-lg: 6px 6px 0px #000000;
-  --shadow-xl: 8px 8px 0px #000000;
+  /* Crisp Hard Offset Shadows */
+  --shadow-xs: 2px 2px 0px #171717;
+  --shadow-sm: 3px 3px 0px #171717;
+  --shadow-md: 4px 4px 0px #171717;
+  --shadow-lg: 6px 6px 0px #171717;
+  --shadow-xl: 8px 8px 0px #171717;
 
-  /* Colors (Zero green, high-energy cyber brutalism) */
-  --accent-work: #2563eb;       /* Electric Royal Cobalt */
-  --accent-work-text: #ffffff;
-  --accent-break: #facc15;      /* Sunburst Cyber Yellow */
-  --accent-break-text: #050505;
-  --accent-resume: #7c3aed;     /* Electric Ultraviolet */
-  --accent-resume-text: #ffffff;
-  --accent-end: #f43f5e;        /* Punch Coral Crimson */
-  --accent-end-text: #ffffff;
-  --accent-danger: #ef4444;     /* Red alert */
+  /* High-Contrast Accents */
+  --accent-work: #315CFF;       /* Primary Accent */
+  --accent-work-text: #FFFFFF;
+  --accent-break: #FFD84D;      /* Secondary Accent */
+  --accent-break-text: #171717;
+  --accent-resume: #315CFF;
+  --accent-resume-text: #FFFFFF;
+  --accent-end: #C73535;        /* Error / End Day */
+  --accent-end-text: #FFFFFF;
+  --accent-danger: #C73535;
+  --accent-success: #187A45;    /* Success */
+  --accent-warning: #A15C00;    /* Warning */
 
-  --connection-online-bg: #dbeafe;
-  --connection-online-text: #1d4ed8;
+  --connection-online-bg: #E6F4EA;
+  --connection-online-text: #187A45;
 
   --font-display: 'Outfit', 'Space Grotesk', sans-serif;
   --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -51,11 +55,11 @@
 
 [data-theme="dark"] {
   --bg: #171717;
-  --bg-pattern-color: #2b2b2b;
-  --surface: #292929;
-  --surface-alt: #202020;
-  --surface-muted: #303030;
-  --surface-highlight: #3a3a3a;
+  --bg-pattern-color: #262626;
+  --surface: #222222;
+  --surface-alt: #2D2D2D;
+  --surface-muted: #292929;
+  --surface-highlight: #353535;
 
   --text-main: #F5F1E8;
   --text-muted: #B8B8B8;
@@ -66,28 +70,84 @@
   --border-heavy: 3px;
   --shadow-color: #000000;
 
-  /* Tactile Neo-Brutalist 3D Hard Shadows in Dark Mode */
+  /* Tactile Neo-Brutalist 3D Hard Shadows */
   --shadow-xs: 2px 2px 0px #000000;
   --shadow-sm: 3px 3px 0px #000000;
   --shadow-md: 4px 4px 0px #000000;
   --shadow-lg: 6px 6px 0px #000000;
   --shadow-xl: 8px 8px 0px #000000;
 
-  /* High-Contrast Neo-Brutalist Accents */
+  /* Dark Neo-Brutalist Accents */
   --accent-work: #5B7CFF;       /* Electric Blue */
-  --accent-work-text: #ffffff;
+  --accent-work-text: #FFFFFF;
   --accent-break: #FFD84D;      /* Vivid Yellow */
   --accent-break-text: #121212;
   --accent-resume: #8B5CF6;     /* Electric Violet */
-  --accent-resume-text: #ffffff;
+  --accent-resume-text: #FFFFFF;
   --accent-end: #FF6B6B;        /* Coral Red */
   --accent-end-text: #121212;
-  --accent-danger: #FF6B6B;     /* Coral Red */
+  --accent-danger: #FF6B6B;
   --accent-success: #78E6A0;    /* Mint Green */
   --accent-warning: #FFC15A;    /* Warm Amber */
 
-  --connection-online-bg: #14281c;
+  --connection-online-bg: #14281C;
   --connection-online-text: #78E6A0;
+
+  --font-display: 'Outfit', 'Space Grotesk', sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+[data-theme="frontier"] {
+  --bg: #171512;                /* Charred Obsidian / Frontier Campfire */
+  --bg-pattern-color: #27211A;
+  --surface: #211D18;           /* Primary Surface: Dark Frontier Wood / Leather */
+  --surface-alt: #30271F;       /* Secondary Surface: Aged Walnut */
+  --surface-muted: #29221B;
+  --surface-raised: #3A3025;     /* Raised Frontier Surface */
+  --surface-highlight: #45372B;
+  --surface-parchment: #F0DFB8;  /* Cattleman Vintage Parchment */
+  --surface-aged-paper: #D7BC88; /* Aged Paper */
+
+  --text-main: #F0DFB8;         /* Parchment Cream */
+  --text-muted: #B8A487;        /* Weathered Tan */
+  --text-dim: #8A7862;
+  --text-ink: #17130F;          /* Dark Calligraphy Ink */
+
+  --border: #3A3025;
+  --border-ink: #17130F;
+  --border-gold: #C89A4A;
+  --border-rust: #A43D2F;
+  --border-width: 2.5px;
+  --border-heavy: 3px;
+  --shadow-color: #0A0806;
+
+  /* Frontier 3D Offset Hard Shadows */
+  --shadow-xs: 2px 2px 0px #0A0806;
+  --shadow-sm: 3px 3px 0px #0A0806;
+  --shadow-md: 4px 4px 0px #0A0806;
+  --shadow-lg: 6px 6px 0px #0A0806;
+  --shadow-xl: 8px 8px 0px #0A0806;
+
+  /* Frontier Palette (RDR2 Inspired) */
+  --accent-work: #A43D2F;       /* Frontier Rust Red */
+  --accent-work-text: #F0DFB8;
+  --accent-break: #C89A4A;      /* Antique Gold */
+  --accent-break-text: #17130F;
+  --accent-resume: #8A4A35;     /* Saddle Burgundy */
+  --accent-resume-text: #F0DFB8;
+  --accent-end: #D45B4D;        /* Bounty Red */
+  --accent-end-text: #17130F;
+  --accent-danger: #D45B4D;
+  --accent-success: #66A875;    /* Sagebrush Green */
+  --accent-warning: #E2B45C;    /* Warm Lantern Gold */
+
+  --connection-online-bg: #1F2D22;
+  --connection-online-text: #66A875;
+
+  --font-display: 'Alfa Slab One', 'Rye', 'Outfit', serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 * {
@@ -237,31 +297,89 @@ button {
   box-shadow: 0 0 0 transparent;
 }
 
-/* Theme Toggle Button */
-.theme-toggle-btn {
+/* Three-Mode Theme Selector Segmented Control */
+.theme-segmented-control {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 10px;
+  background: var(--surface-alt);
   border: var(--border-width) solid var(--border);
-  background: var(--surface);
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
   box-shadow: var(--shadow-xs);
-  transition: transform .1s ease, box-shadow .1s ease;
+  transition: all 0.15s ease;
   min-height: 38px;
 }
-.theme-toggle-btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--shadow-sm);
+
+.theme-segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  user-select: none;
 }
-.theme-toggle-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 transparent;
+
+.theme-segment-btn:hover:not(.active) {
+  color: var(--text-main);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .theme-segment-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="frontier"] .theme-segment-btn:hover:not(.active) {
+  background: rgba(200, 154, 74, 0.12);
+  color: #F0DFB8;
+}
+
+.theme-segment-btn.active {
+  background: var(--surface);
+  color: var(--text-main);
+  border-color: var(--border);
+  box-shadow: 2px 2px 0px var(--shadow-color);
+  font-weight: 800;
+  transform: translate(-1px, -1px);
+}
+
+/* Light Active State */
+[data-theme="light"] .theme-segment-btn.active {
+  background: #FFFFFF;
+  color: #171717;
+  border-color: #171717;
+  box-shadow: 2px 2px 0px #171717;
+}
+
+/* Dark Active State */
+[data-theme="dark"] .theme-segment-btn.active {
+  background: #2D2D2D;
+  color: #F5F1E8;
+  border-color: #5B7CFF;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+/* Frontier Active State */
+[data-theme="frontier"] .theme-segment-btn.active {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #C89A4A;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+
+.frontier-hat-icon {
+  font-size: 12px;
+  line-height: 1;
+  display: inline-block;
 }
 
 /* Connection Badge */
@@ -4283,9 +4401,737 @@ footer {
 }
 
 /* =========================================================================
+   SHIFTLY — THEME THREE: FRONTIER NEO-BRUTALISM (RDR2 INSPIRED)
+   Charred Obsidian #171512 · Saloon Leather #211D18 · Aged Walnut #30271F
+   Raised Surface #3A3025 · Vintage Parchment #F0DFB8 · Aged Paper #D7BC88
+   Muted Tan #B8A487 · Antique Watch Gold #C89A4A · Outlaw Rust Red #A43D2F
+   Sagebrush Green #66A875 · Warm Lantern Amber #E2B45C · Bounty Red #D45B4D
+   ========================================================================= */
+
+/* Background Texture & Tone for Frontier */
+[data-theme="frontier"] body {
+  background-color: #171512;
+  background-image: 
+    radial-gradient(#2c231b 1.2px, transparent 1.2px),
+    linear-gradient(to bottom, rgba(23, 21, 18, 0.96), rgba(23, 21, 18, 0.99));
+  background-size: 24px 24px, 100% 100%;
+  color: #F0DFB8;
+}
+
+/* Frontier Typography Headings */
+[data-theme="frontier"] h1,
+[data-theme="frontier"] h2,
+[data-theme="frontier"] h3,
+[data-theme="frontier"] .brand {
+  font-family: var(--font-display);
+  letter-spacing: -0.5px;
+}
+
+/* Topbar & Brand */
+[data-theme="frontier"] .topbar {
+  border-bottom-color: #3A3025;
+}
+[data-theme="frontier"] .brand {
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .brand-mark {
+  background: #A43D2F;
+  border-color: #C89A4A;
+  box-shadow: 3px 3px 0px #0A0806;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .brand-accent {
+  color: #C89A4A;
+}
+
+/* Status Pill */
+[data-theme="frontier"] .status-pill {
+  background: #211D18;
+  border-color: #3A3025;
+  color: #F0DFB8;
+  box-shadow: 3px 3px 0px #0A0806;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+}
+[data-theme="frontier"] .status-dot {
+  border-color: #0A0806;
+}
+[data-theme="frontier"] .status-dot.working {
+  background: #C89A4A;
+  box-shadow: 0 0 0 3px rgba(200, 154, 74, 0.35);
+}
+[data-theme="frontier"] .status-dot.on_break {
+  background: #A43D2F;
+  box-shadow: 0 0 0 3px rgba(164, 61, 47, 0.35);
+}
+[data-theme="frontier"] .status-dot.completed {
+  background: #66A875;
+}
+
+/* Connection Badges */
+[data-theme="frontier"] .connection.online {
+  background: #1C291E;
+  color: #66A875;
+  border-color: #2F4B34;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .connection.offline {
+  background: #2D1917;
+  color: #D45B4D;
+  border-color: #5C2723;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .logout-button {
+  background: #211D18;
+  border-color: #3A3025;
+  color: #B8A487;
+  box-shadow: 2px 2px 0px #0A0806;
+  font-family: var(--font-mono);
+}
+[data-theme="frontier"] .logout-button:hover {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #0A0806;
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0px #0A0806;
+}
+
+/* Eyebrow & Intro */
+[data-theme="frontier"] .eyebrow-badge {
+  background: #2A2219;
+  color: #C89A4A;
+  border-color: #4A3A29;
+  box-shadow: 2px 2px 0px #0A0806;
+  font-family: var(--font-mono);
+  letter-spacing: 0.8px;
+}
+[data-theme="frontier"] .frontier-star {
+  color: #C89A4A;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Date & Streak Row */
+[data-theme="frontier"] .date-line {
+  color: #B8A487;
+}
+[data-theme="frontier"] .streak-badge {
+  background: #211D18;
+  border-color: #3A3025;
+  color: #F0DFB8;
+  box-shadow: 3px 3px 0px #0A0806;
+}
+[data-theme="frontier"] .streak-badge.active {
+  background: #2A2219;
+  border-color: #C89A4A;
+}
+[data-theme="frontier"] .streak-flame {
+  color: #C89A4A;
+}
+
+/* Alerts */
+[data-theme="frontier"] .alert.error {
+  background: #2D1917;
+  border-color: #D45B4D;
+  color: #F7B5AD;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .alert.success {
+  background: #1C291E;
+  border-color: #66A875;
+  color: #B5E0BE;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .text-button {
+  background: #211D18;
+  color: #F0DFB8;
+  border-color: #3A3025;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .text-button:hover {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #0A0806;
+}
+
+/* Hero Card (Main Attendance Card) */
+[data-theme="frontier"] .hero-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 6px 6px 0px #0A0806;
+  position: relative;
+}
+[data-theme="frontier"] .hero-icon {
+  background: #2A2219;
+  color: #C89A4A;
+  border-color: #3A3025;
+  box-shadow: 3px 3px 0px #0A0806;
+}
+[data-theme="frontier"] .muted-label {
+  color: #B8A487;
+  letter-spacing: 0.5px;
+}
+[data-theme="frontier"] .target-line {
+  color: #B8A487;
+}
+[data-theme="frontier"] .target-line strong {
+  color: #F0DFB8;
+}
+
+/* Flap / Timer Display in Frontier Mode */
+[data-theme="frontier"] .flap-tile {
+  background: #17130F;
+  border-color: #3A3025;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .flap-tile::before {
+  background: linear-gradient(180deg, rgba(200, 154, 74, 0.12) 0%, transparent 100%);
+}
+[data-theme="frontier"] .flap-char {
+  color: #C89A4A;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+[data-theme="frontier"] .flap-unit {
+  color: #B8A487;
+}
+[data-theme="frontier"] .flap-separator {
+  color: #8A7862;
+}
+
+/* Progress Bar */
+[data-theme="frontier"] .progress-track {
+  background: #17130F;
+  border-color: #3A3025;
+}
+[data-theme="frontier"] .progress-fill {
+  background: repeating-linear-gradient(
+    -45deg,
+    #C89A4A,
+    #C89A4A 12px,
+    #A47A32 12px,
+    #A47A32 24px
+  );
+  border-right-color: #0A0806;
+}
+[data-theme="frontier"] .progress-caption {
+  color: #B8A487;
+}
+[data-theme="frontier"] .hero-divider {
+  background: #3A3025;
+}
+
+/* Target Tags */
+[data-theme="frontier"] .target-tag {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #F0DFB8;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .target-tag strong {
+  color: #C89A4A;
+}
+
+/* Action Buttons (Frontier Rust Red & Antique Gold) */
+[data-theme="frontier"] .action-button.action-start-work,
+[data-theme="frontier"] .action-button.primary {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #17130F;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .action-button.action-start-work .action-icon,
+[data-theme="frontier"] .action-button.primary .action-icon {
+  background: #7A2E22;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+
+[data-theme="frontier"] .action-button.action-start-break {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .action-button.action-start-break .action-icon {
+  background: #A67D35;
+  color: #17130F;
+  border-color: #17130F;
+}
+
+[data-theme="frontier"] .action-button.action-resume-work {
+  background: #8A4A35;
+  color: #F0DFB8;
+  border-color: #17130F;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .action-button.action-resume-work .action-icon {
+  background: #6B3525;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+
+[data-theme="frontier"] .action-button.action-end-day,
+[data-theme="frontier"] .action-button.secondary {
+  background: #6E2218;
+  color: #F0DFB8;
+  border-color: #17130F;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .action-button.action-end-day .action-icon,
+[data-theme="frontier"] .action-button.secondary .action-icon {
+  background: #4E1810;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+
+[data-theme="frontier"] .action-button:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #0A0806;
+}
+[data-theme="frontier"] .action-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #0A0806;
+}
+
+/* Break Metrics Cards & Schedule */
+[data-theme="frontier"] .metric-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .metric-card:hover {
+  box-shadow: 6px 6px 0px #0A0806;
+}
+[data-theme="frontier"] .metric-icon.break {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .metric-icon.lunch {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .mini-track {
+  background: #17130F;
+  border-color: #3A3025;
+}
+[data-theme="frontier"] .mini-fill {
+  background: #C89A4A;
+  border-right-color: #0A0806;
+}
+[data-theme="frontier"] .mini-fill.over {
+  background: #D45B4D;
+}
+[data-theme="frontier"] .plan-badge-pill {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #C89A4A;
+}
+
+/* Break Slot Items in Frontier */
+[data-theme="frontier"] .break-slot-item {
+  background: #2A2219;
+  border-color: #352B20;
+}
+[data-theme="frontier"] .break-slot-item.active-now {
+  border-color: #C89A4A;
+  box-shadow: 0 0 0 2px rgba(200, 154, 74, 0.25);
+}
+[data-theme="frontier"] .slot-title strong {
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .slot-title small {
+  color: #B8A487;
+}
+[data-theme="frontier"] .slot-used-text {
+  color: #B8A487;
+}
+[data-theme="frontier"] .slot-progress-track {
+  background: #17130F;
+  border-color: #3A3025;
+}
+[data-theme="frontier"] .slot-progress-bar {
+  background: #C89A4A;
+}
+[data-theme="frontier"] .slot-progress-bar.over {
+  background: #D45B4D;
+}
+[data-theme="frontier"] .slot-compensated-badge {
+  background: #F0DFB8;
+  color: #17130F;
+  border-color: #C89A4A;
+}
+[data-theme="frontier"] .slot-over-badge {
+  background: #2D1917;
+  color: #D45B4D;
+  border-color: #D45B4D;
+}
+
+/* Break Compensation Advisor */
+[data-theme="frontier"] .compensation-card {
+  background: #251F19;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .compensation-card.danger {
+  border-color: #A43D2F;
+}
+[data-theme="frontier"] .compensation-card.success {
+  border-color: #66A875;
+}
+[data-theme="frontier"] .compensation-icon {
+  background: #2A2219;
+  color: #C89A4A;
+  border-color: #3A3025;
+}
+[data-theme="frontier"] .compensation-eyebrow {
+  color: #C89A4A;
+}
+[data-theme="frontier"] .compensation-headline {
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .compensation-recommendation {
+  color: #B8A487;
+}
+[data-theme="frontier"] .compensation-option-pill {
+  background: #2A2219;
+  border-color: #352B20;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .btn-apply-preset {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .btn-apply-preset:hover {
+  background: #DFB25E;
+}
+[data-theme="frontier"] .btn-undo-compensation,
+[data-theme="frontier"] .btn-undo-link {
+  background: #2A2219;
+  color: #B8A487;
+  border-color: #3A3025;
+}
+
+/* Smart Break Focus Timer Ring */
+[data-theme="frontier"] .break-focus-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .ring-track-circle {
+  stroke: #17130F;
+}
+[data-theme="frontier"] .ring-progress-circle {
+  stroke: #C89A4A;
+}
+[data-theme="frontier"] .ring-progress-circle.warning {
+  stroke: #E2B45C;
+}
+[data-theme="frontier"] .ring-progress-circle.danger {
+  stroke: #D45B4D;
+}
+[data-theme="frontier"] .ring-timer-text strong {
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .ring-timer-text span {
+  color: #B8A487;
+}
+[data-theme="frontier"] .preset-limit-chip {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #B8A487;
+}
+[data-theme="frontier"] .preset-limit-chip.active {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+}
+
+/* Custom Time / Late Punch Picker */
+[data-theme="frontier"] .custom-time-bar {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .custom-time-toggle {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #B8A487;
+}
+[data-theme="frontier"] .custom-time-clock-badge {
+  background: #17130F;
+  border-color: #3A3025;
+  color: #C89A4A;
+}
+[data-theme="frontier"] .swipe-slider-card {
+  background: #17130F;
+  border-color: #3A3025;
+  box-shadow: 3px 3px 0px #0A0806;
+}
+[data-theme="frontier"] .swipe-range.hour-range::-webkit-slider-thumb,
+[data-theme="frontier"] .swipe-range.minute-range::-webkit-slider-thumb {
+  background: #C89A4A;
+  border-color: #17130F;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .swipe-value-badge {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .swipe-nudge-btn {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .chip-btn {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #B8A487;
+}
+[data-theme="frontier"] .chip-btn:hover {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+}
+
+/* Activity / Today's Punch History Timeline */
+[data-theme="frontier"] .history-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .history-row {
+  border-bottom-color: #30271F;
+}
+[data-theme="frontier"] .history-symbol.start_work {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .history-symbol.start_break {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .history-symbol.resume_work {
+  background: #8A4A35;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .history-symbol.end_day {
+  background: #6E2218;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .history-description strong {
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .history-description span {
+  color: #B8A487;
+}
+[data-theme="frontier"] .history-row time {
+  color: #C89A4A;
+  background: #17130F;
+  border: 1px solid #3A3025;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+[data-theme="frontier"] .icon-btn {
+  background: #2A2219;
+  border-color: #3A3025;
+  color: #B8A487;
+}
+[data-theme="frontier"] .icon-btn:hover {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+}
+[data-theme="frontier"] .icon-btn.danger:hover {
+  background: #D45B4D;
+  color: #17130F;
+}
+
+/* History Ledger Table & Controls */
+[data-theme="frontier"] .add-punch-btn {
+  background: #C89A4A;
+  color: #17130F;
+  border-color: #17130F;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .refresh-button {
+  background: #211D18;
+  border-color: #3A3025;
+  color: #B8A487;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .history-table-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .history-table-header {
+  background: #2A2219;
+  border-bottom-color: #3A3025;
+  color: #C89A4A;
+  font-family: var(--font-display);
+}
+[data-theme="frontier"] .history-table-row {
+  border-bottom-color: #30271F;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .history-table-row:nth-child(even) {
+  background: #262019;
+}
+[data-theme="frontier"] .badge-hit,
+[data-theme="frontier"] .detail-status.hit {
+  background: #1C291E;
+  color: #66A875;
+  border-color: #2F4B34;
+}
+[data-theme="frontier"] .badge-miss,
+[data-theme="frontier"] .detail-status.miss {
+  background: #2D1917;
+  color: #D45B4D;
+  border-color: #5C2723;
+}
+[data-theme="frontier"] .btn-export-csv {
+  background: #D7BC88;
+  color: #17130F;
+  border-color: #17130F;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+
+/* Shift Analytics Dashboard & Calendar */
+[data-theme="frontier"] .analytics-section,
+[data-theme="frontier"] .calendar-card,
+[data-theme="frontier"] .chart-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 4px 4px 0px #0A0806;
+}
+[data-theme="frontier"] .analytics-stat-pill {
+  background: #2A2219;
+  border-color: #3A3025;
+}
+[data-theme="frontier"] .analytics-stat-value {
+  color: #C89A4A;
+}
+[data-theme="frontier"] .analytics-stat-label {
+  color: #B8A487;
+}
+[data-theme="frontier"] .bar-fill-work {
+  background: #C89A4A;
+}
+[data-theme="frontier"] .bar-fill-break {
+  background: #A43D2F;
+}
+[data-theme="frontier"] .calendar-day {
+  background: #211D18;
+  border-color: #30271F;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .calendar-day:hover {
+  background: #2A2219;
+}
+[data-theme="frontier"] .calendar-day.is-today {
+  border-color: #C89A4A;
+}
+[data-theme="frontier"] .calendar-day.is-selected {
+  background: #3A2E20;
+  border-color: #C89A4A;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+
+/* Modals & Dialogs */
+[data-theme="frontier"] .modal-overlay {
+  background: rgba(15, 12, 10, 0.88);
+}
+[data-theme="frontier"] .modal-box {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 6px 6px 0px #0A0806;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .modal-header {
+  border-bottom-color: #3A3025;
+}
+[data-theme="frontier"] .modal-footer {
+  border-top-color: #3A3025;
+}
+[data-theme="frontier"] .select-input,
+[data-theme="frontier"] .text-input {
+  background: #17130F;
+  border-color: #3A3025;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .select-input:focus,
+[data-theme="frontier"] .text-input:focus {
+  border-color: #C89A4A;
+  box-shadow: 0 0 0 2px rgba(200, 154, 74, 0.3);
+}
+
+/* Auth Card */
+[data-theme="frontier"] .auth-card {
+  background: #211D18;
+  border-color: #3A3025;
+  box-shadow: 8px 8px 0px #0A0806;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .auth-card input {
+  background: #17130F;
+  border-color: #3A3025;
+  color: #F0DFB8;
+}
+[data-theme="frontier"] .auth-card input:focus {
+  border-color: #C89A4A;
+  box-shadow: 0 0 0 2px rgba(200, 154, 74, 0.35);
+}
+[data-theme="frontier"] .auth-submit {
+  background: #A43D2F;
+  color: #F0DFB8;
+  border-color: #17130F;
+}
+
+/* Footer in Frontier */
+[data-theme="frontier"] footer {
+  border-top-color: #3A3025;
+  color: #B8A487;
+}
+[data-theme="frontier"] .creator-badge {
+  background: #211D18;
+  border-color: #3A3025;
+  color: #F0DFB8;
+  box-shadow: 2px 2px 0px #0A0806;
+}
+[data-theme="frontier"] .creator-spark {
+  color: #C89A4A;
+}
+[data-theme="frontier"] .creator-link {
+  color: #C89A4A;
+}
+[data-theme="frontier"] .creator-link:hover {
+  color: #DFB25E;
+}
+
+/* =========================================================================
    Mobile Optimization (OnePlus Nord 5 & Modern Smart Phones)
    ========================================================================= */
 @media (max-width: 640px) {
+  .theme-segmented-control {
+    padding: 2px;
+    gap: 2px;
+    min-height: 34px;
+  }
+  .theme-segment-btn {
+    padding: 5px 8px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
   .shell {
     width: 100%;
     padding-left: 16px;
@@ -4491,6 +5337,15 @@ footer {
     gap: 8px;
     text-align: center;
     align-items: center;
+  }
+}
+
+@media (max-width: 460px) {
+  .theme-segment-btn span:not(.frontier-hat-icon) {
+    display: none;
+  }
+  .theme-segment-btn {
+    padding: 6px 8px;
   }
 }
 

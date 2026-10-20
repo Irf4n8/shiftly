@@ -1209,6 +1209,46 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
   );
 }
 
+function ThemeSelector({ currentTheme, onSelectTheme }) {
+  return (
+    <div className="theme-segmented-control" role="radiogroup" aria-label="Select theme">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={currentTheme === "light"}
+        className={`theme-segment-btn ${currentTheme === "light" ? "active" : ""}`}
+        onClick={() => onSelectTheme("light")}
+        title="Light Mode — Clean Neo-Brutalism"
+      >
+        <Sun size={13} />
+        <span>Light</span>
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={currentTheme === "dark"}
+        className={`theme-segment-btn ${currentTheme === "dark" ? "active" : ""}`}
+        onClick={() => onSelectTheme("dark")}
+        title="Dark Mode — Dark Neo-Brutalism"
+      >
+        <Moon size={13} />
+        <span>Dark</span>
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={currentTheme === "frontier"}
+        className={`theme-segment-btn frontier-segment ${currentTheme === "frontier" ? "active" : ""}`}
+        onClick={() => onSelectTheme("frontier")}
+        title="Frontier Mode — Red Dead Redemption 2-inspired Western Neo-Brutalism"
+      >
+        <span className="frontier-hat-icon">🤠</span>
+        <span>Frontier</span>
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const [accessCode, setAccessCode] = useState(() => sessionStorage.getItem("shiftly_access") || sessionStorage.getItem("officetime_access") || "");
   const [codeInput, setCodeInput] = useState("");
@@ -1289,17 +1329,23 @@ export default function App() {
   }, []);
 
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("shiftly_theme") || "light";
+    const saved = localStorage.getItem("shiftly_theme");
+    if (saved === "light" || saved === "dark" || saved === "frontier") {
+      return saved;
+    }
+    return "light";
   });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("shiftly_theme", theme);
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      if (theme === "dark") metaThemeColor.setAttribute("content", "#171717");
+      else if (theme === "frontier") metaThemeColor.setAttribute("content", "#171512");
+      else metaThemeColor.setAttribute("content", "#F5F1E8");
+    }
   }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
 
   // Custom punch time state
   const [isCustomTimeOpen, setIsCustomTimeOpen] = useState(false);
@@ -1881,22 +1927,14 @@ export default function App() {
             <span>Shift<span className="brand-accent">ly</span></span>
           </a>
           <div className="topbar-right">
-            <button
-              type="button"
-              className="theme-toggle-btn"
-              onClick={toggleTheme}
-              title={`Switch to ${theme === "light" ? "Dark" : "Light"} Neo-Brutalist mode`}
-            >
-              {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
-              <span>{theme === "light" ? "DARK" : "LIGHT"}</span>
-            </button>
+            <ThemeSelector currentTheme={theme} onSelectTheme={setTheme} />
             <div className="connection offline"><WifiOff size={14} /><span>Private</span></div>
           </div>
         </header>
         <section className="auth-card">
           <div className="brand-mark auth-mark"><Zap size={24} /></div>
-          <p className="eyebrow">SMART WORKDAY & SHIFT TRACKER</p>
-          <h1>Welcome <span>back.</span></h1>
+          <p className="eyebrow">{theme === "frontier" ? "★ FRONTIER WORKDAY & SHIFT LEDGER ★" : "SMART WORKDAY & SHIFT TRACKER"}</p>
+          <h1>Welcome <span>{theme === "frontier" ? "back, partner." : "back."}</span></h1>
           <p className="auth-copy">Enter your access code to open your Shiftly dashboard.</p>
           {error && <div className="alert error"><CircleAlert size={18} /><span>{error}</span></div>}
           <form onSubmit={login} className="auth-form">
@@ -1904,7 +1942,7 @@ export default function App() {
             <input id="access-code" type="password" autoComplete="current-password" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} placeholder="Enter your access code" required />
             <button className="action-button primary auth-submit" type="submit" disabled={busy || !codeInput.trim()}>
               <span className="action-text">
-                <strong>{busy ? "Checking…" : "Unlock dashboard"}</strong>
+                <strong>{busy ? "Checking…" : (theme === "frontier" ? "Unlock Frontier Ledger" : "Unlock dashboard")}</strong>
                 <small>Your code is checked securely on the server</small>
               </span>
               <span className="action-arrow">↗</span>
@@ -1913,7 +1951,7 @@ export default function App() {
           <p className="helper-note">Set APP_ACCESS_CODE in your Vercel environment variables before using the deployed app.</p>
         </section>
         <footer>
-          <span>Shiftly <span className="footer-dot">·</span> Neo-Brutalist Attendance</span>
+          <span>Shiftly <span className="footer-dot">·</span> {theme === "frontier" ? "Frontier Western Neo-Brutalism (RDR2 Inspired)" : theme === "dark" ? "Dark Neo-Brutalist Attendance" : "Neo-Brutalist Attendance"}</span>
           <span className="creator-badge">
             <span className="creator-spark">⚡</span> Made with care by <a href="https://github.com/Irf4n8" target="_blank" rel="noopener noreferrer" className="creator-link"><strong>Irf4n</strong></a>
           </span>
@@ -1947,15 +1985,7 @@ export default function App() {
               </button>
             </div>
           )}
-          <button
-            type="button"
-            className="theme-toggle-btn"
-            onClick={toggleTheme}
-            title={`Switch to ${theme === "light" ? "Dark" : "Light"} Neo-Brutalist mode`}
-          >
-            {theme === "light" ? <Moon size={15} /> : <Sun size={15} />}
-            <span>{theme === "light" ? "DARK" : "LIGHT"}</span>
-          </button>
+          <ThemeSelector currentTheme={theme} onSelectTheme={setTheme} />
           <div className={`connection ${connected ? "online" : "offline"}`}>
             {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
             <span>{connected ? "Syncing Live" : offlineQueue.length > 0 ? "Offline (Queued)" : "Offline"}</span>
@@ -1967,24 +1997,37 @@ export default function App() {
       <section className="intro">
         <div>
           <div className="eyebrow-badge">
-            <Sparkles size={13} />
-            <span>SMART SHIFT TRACKER</span>
+            {theme === "frontier" ? <span className="frontier-star">★</span> : <Sparkles size={13} />}
+            <span>{theme === "frontier" ? "FRONTIER WORK LEDGER" : "SMART SHIFT TRACKER"}</span>
           </div>
-          <h1>Master your workday,<br /><span>shift by shift.</span></h1>
+          <h1>
+            {theme === "frontier" ? (
+              <>Account for every hour,<br /><span>across the frontier.</span></>
+            ) : (
+              <>Master your workday,<br /><span>shift by shift.</span></>
+            )}
+          </h1>
           <div className="date-streak-row">
             <p className="date-line"><CalendarDays size={15} /> {formatDate()}</p>
             <div className={`streak-badge ${streak > 0 ? "active" : "empty"}`} title="Consecutive days completing 8 hours with zero break overages">
-              <span className="streak-flame">🔥</span>
+              <span className="streak-flame">{theme === "frontier" ? "★" : "🔥"}</span>
               <span className="streak-badge-text">
-                <strong>{streak > 0 ? `${streak}-day on-time streak!` : "0-day streak"}</strong>
-                <small>{streak > 0 ? "8h completed · zero overages" : "Hit 8h + ≤1h break today to start"}</small>
+                <strong>{streak > 0 ? (theme === "frontier" ? `${streak}-Day Frontier Record!` : `${streak}-day on-time streak!`) : (theme === "frontier" ? "0-Day Frontier Record" : "0-day streak")}</strong>
+                <small>{streak > 0 ? (theme === "frontier" ? "8h completed · zero overages on duty" : "8h completed · zero overages") : (theme === "frontier" ? "Complete 8h + ≤1h break today to start ledger" : "Hit 8h + ≤1h break today to start")}</small>
               </span>
             </div>
           </div>
         </div>
         <div className="status-pill">
           <span className={`status-dot ${summary.status.toLowerCase()}`} />
-          <span className="status-pill-text">{statusCopy[0]}</span>
+          <span className="status-pill-text">
+            {theme === "frontier"
+              ? summary.status === "WORKING" ? "WANTED: ON DUTY"
+                : summary.status === "ON_BREAK" ? "RESTING AT CAMP"
+                : summary.status === "COMPLETED" ? "DAY CONCLUDED"
+                : "STANDBY AT OUTPOST"
+              : statusCopy[0]}
+          </span>
         </div>
       </section>
 
@@ -2503,7 +2546,7 @@ export default function App() {
 
       <footer>
         <div className="footer-info">
-          <span>Shiftly <span className="footer-dot">·</span> Smart Workday Tracker</span>
+          <span>Shiftly <span className="footer-dot">·</span> {theme === "frontier" ? "Frontier Western Neo-Brutalism (RDR2 Inspired)" : theme === "dark" ? "Dark Neo-Brutalist Attendance" : "Clean Neo-Brutalist Attendance"}</span>
           <span className="footer-stats">8h target <span className="footer-dot">·</span> 1h break allowance</span>
         </div>
         <span className="creator-badge">
