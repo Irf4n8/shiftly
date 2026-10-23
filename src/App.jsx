@@ -73,15 +73,27 @@ function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT
   const slots = BREAK_SLOT_CONFIGS.map((cfg) => {
     let allowedMinutes = cfg.allowedMinutes;
     let isCompensated = false;
+    let isRollover = false;
+    let bonusMinutes = 0;
+    let deductMinutes = 0;
     let originalAllowedMinutes = cfg.allowedMinutes;
     if (isCompensationForToday && appliedCompensation.slotId === cfg.id) {
       allowedMinutes = appliedCompensation.targetMinutes;
-      isCompensated = true;
+      if (appliedCompensation.type === "rollover") {
+        isRollover = true;
+        bonusMinutes = appliedCompensation.bonusMinutes || Math.max(0, appliedCompensation.targetMinutes - originalAllowedMinutes);
+      } else {
+        isCompensated = true;
+        deductMinutes = appliedCompensation.deductMinutes || Math.max(0, originalAllowedMinutes - appliedCompensation.targetMinutes);
+      }
     }
     return {
       ...cfg,
       allowedMinutes,
       isCompensated,
+      isRollover,
+      bonusMinutes,
+      deductMinutes,
       originalAllowedMinutes,
       usedSeconds: 0,
       breaksCount: 0,
@@ -145,6 +157,9 @@ function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT
     const isCurrentWindow = currentMinOfDay >= startMin && currentMinOfDay <= endMin;
     const isPast = currentMinOfDay > endMin;
     const isUpcoming = currentMinOfDay < startMin;
+    const isFinished = (s.breaksCount > 0 && !s.isActiveNow) || isPast;
+    const savedSeconds = isFinished ? Math.max(0, allowedSeconds - s.usedSeconds) : 0;
+    const savedMinutes = Math.floor(savedSeconds / 60);
 
     return {
       ...s,
@@ -157,6 +172,9 @@ function getBreakSlotsData(events = [], nowMs = Date.now(), currentStatus = "NOT
       isCurrentWindow,
       isPast,
       isUpcoming,
+      isFinished,
+      savedSeconds,
+      savedMinutes,
     };
   });
 
@@ -192,6 +210,7 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
         const cutTo = Math.max(0, nextSlot.allowedMinutes - totalExtraMinutes);
         if (cutTo > 0) {
           preset = {
+            type: "deduct",
             slotId: nextSlot.id,
             slotName: nextSlot.name,
             deductMinutes: totalExtraMinutes,
@@ -225,22 +244,51 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
     } else {
       return {
         tone: "info",
-        title: `Active Break: ${activeSlot.shortName}`,
+        title: activeSlot.isRollover
+          ? `Active Break: ${activeSlot.shortName} (Rollover +${activeSlot.bonusMinutes}m)`
+          : `Active Break: ${activeSlot.shortName}`,
         headline: `${activeSlot.usedMinutes}m used (${activeSlot.remainingMinutes}m remaining before overage).`,
         recommendation: `Resume before ${activeSlot.allowedMinutes}m to keep your target finish of ${stdTimeStr || "on time"}.`,
         preset: null,
         actionOptions: [
           { id: "win", text: `Window: ${activeSlot.windowLabel}` },
-          { id: "allow", text: `Allowance: ${activeSlot.allowedMinutes}m max` },
+          {
+            id: "allow",
+            text: activeSlot.isRollover
+              ? `Allowance: ${activeSlot.allowedMinutes}m max (+${activeSlot.bonusMinutes}m rolled over)`
+              : `Allowance: ${activeSlot.allowedMinutes}m max`
+          },
         ],
       };
     }
   }
 
-  // If compensation preset is currently active for today
+  // If compensation or rollover preset is currently active for today
   if (appliedCompensation && appliedCompensation.date === todayKey()) {
     const compensatedSlot = slots.find((s) => s.id === appliedCompensation.slotId);
     const hasCompensatedSlotPassedOrUsed = compensatedSlot && (compensatedSlot.usedSeconds > 0 || compensatedSlot.isPast);
+
+    if (appliedCompensation.type === "rollover") {
+      return {
+        tone: "success",
+        title: "⚡ Break Rollover Active",
+        headline: `+${appliedCompensation.bonusMinutes}m rolled over from ${appliedCompensation.fromSlotName || "earlier break"} into ${appliedCompensation.slotName} (${appliedCompensation.originalAllowedMinutes}m → ${appliedCompensation.targetMinutes}m).`,
+        recommendation: stdTimeStr
+          ? `Standard finish of ${stdTimeStr} is 100% preserved since total daily break remains within the 60m budget!`
+          : `Total 60m daily break allowance preserved.`,
+        preset: null,
+        isApplied: true,
+        isRollover: true,
+        actionOptions: [
+          {
+            id: "applied-status",
+            text: `Applied: ${appliedCompensation.slotName} expanded to ${appliedCompensation.targetMinutes}m (+${appliedCompensation.bonusMinutes}m from ${appliedCompensation.fromSlotName || "previous break"})`
+          },
+          stdTimeStr ? { id: "finish-status", text: `Standard finish preserved: ${stdTimeStr}` } : null,
+        ].filter(Boolean),
+      };
+    }
+
     const netExtra = Math.max(0, totalExtraMinutes - (appliedCompensation.deductMinutes || 0));
 
     // Show active confirmation if no net extra remains or if the compensated slot is still pending
@@ -265,8 +313,58 @@ function generateCompensationAdvice(breakSlotsData, summary, standardEnd, estima
     }
   }
 
-  // 0m extra break - perfect discipline
+  // 0m extra break - check for banked savings (Rollover)
   if (totalExtraMinutes === 0) {
+    // Look for completed slots with banked savings
+    const candidateSavedSlot = slots.find((s, idx) => {
+      const hasUpcomingSlot = slots.slice(idx + 1).some((next) => !next.isPast && next.breaksCount === 0 && !next.isActiveNow);
+      return s.isFinished && hasUpcomingSlot && s.savedMinutes >= 1;
+    });
+
+    if (candidateSavedSlot) {
+      const savedIdx = slots.findIndex((s) => s.id === candidateSavedSlot.id);
+      const nextSlot = slots.slice(savedIdx + 1).find((s) => !s.isPast && s.breaksCount === 0 && !s.isActiveNow);
+
+      if (nextSlot) {
+        const bonusMinutes = candidateSavedSlot.savedMinutes;
+        const targetMinutes = nextSlot.allowedMinutes + bonusMinutes;
+        const preset = {
+          type: "rollover",
+          slotId: nextSlot.id,
+          slotName: nextSlot.name,
+          fromSlotId: candidateSavedSlot.id,
+          fromSlotName: candidateSavedSlot.name,
+          bonusMinutes,
+          originalAllowedMinutes: nextSlot.allowedMinutes,
+          targetMinutes,
+          description: `Roll over +${bonusMinutes}m saved from ${candidateSavedSlot.shortName} to ${nextSlot.shortName} (${nextSlot.allowedMinutes}m → ${targetMinutes}m)`
+        };
+
+        const fromLabel = candidateSavedSlot.breaksCount > 0
+          ? `You took only ${candidateSavedSlot.usedMinutes}m during ${candidateSavedSlot.name} (saved +${bonusMinutes}m under allowance).`
+          : `You saved your entire ${candidateSavedSlot.name} (+${bonusMinutes}m under allowance).`;
+
+        return {
+          tone: "success",
+          title: `✦ Banked Break Savings: +${bonusMinutes}m`,
+          headline: fromLabel,
+          recommendation: `You can roll over your +${bonusMinutes}m saved break into ${nextSlot.shortName} without delaying your workday finish!`,
+          preset,
+          actionOptions: [
+            {
+              id: `rollover-${nextSlot.id}`,
+              text: `Option 1: Add +${bonusMinutes}m to ${nextSlot.name} (${nextSlot.allowedMinutes}m → ${targetMinutes}m)`,
+              preset
+            },
+            stdTimeStr ? {
+              id: "finish-std",
+              text: `Option 2: Keep standard finish at ${stdTimeStr} (60m daily budget intact)`
+            } : null,
+          ].filter(Boolean),
+        };
+      }
+    }
+
     return {
       tone: "success",
       title: "All Breaks Within Allowance",
@@ -1358,17 +1456,26 @@ export default function App() {
       localStorage.setItem("shiftly_applied_compensation", JSON.stringify(item));
     } catch (e) {}
     triggerVibrate([100, 50, 150]);
-    setNotice(`⚡ Compensation preset applied! ${preset.slotName} adjusted to ${preset.targetMinutes}m (targets on-time finish).`);
+    if (preset.type === "rollover") {
+      setNotice(`⚡ Break rollover applied! +${preset.bonusMinutes}m added to ${preset.slotName} (${preset.targetMinutes}m total). Standard finish on time!`);
+    } else {
+      setNotice(`⚡ Compensation preset applied! ${preset.slotName} adjusted to ${preset.targetMinutes}m (targets on-time finish).`);
+    }
   }, []);
 
   const undoCompensationPreset = useCallback(() => {
+    const wasRollover = appliedCompensation?.type === "rollover";
     setAppliedCompensation(null);
     try {
       localStorage.removeItem("shiftly_applied_compensation");
     } catch (e) {}
     triggerVibrate([100]);
-    setNotice("↺ Compensation preset undone. Original break budget restored.");
-  }, []);
+    if (wasRollover) {
+      setNotice("↺ Break rollover undone. Original break schedule restored.");
+    } else {
+      setNotice("↺ Compensation preset undone. Original break budget restored.");
+    }
+  }, [appliedCompensation]);
 
   // Offline Resilience Queue (Zero Lost Punches)
   const [offlineQueue, setOfflineQueue] = useState(() => {
@@ -2211,14 +2318,22 @@ export default function App() {
             <div className="finish-time-row">
               <strong>{estimatedEnd ? formatClock(estimatedEnd) : "—"}</strong>
               {appliedCompensation ? (
-                <span className="compensated-finish-badge" title="Targeting on-time finish via shortened break preset">⚡ Compensated</span>
+                appliedCompensation.type === "rollover" ? (
+                  <span className="rollover-finish-badge" title="Targeting on-time finish with banked break rollover">⚡ Rollover</span>
+                ) : (
+                  <span className="compensated-finish-badge" title="Targeting on-time finish via shortened break preset">⚡ Compensated</span>
+                )
               ) : totalExtraBreakMinutes > 0 ? (
                 <span className="extra-break-badge">+{totalExtraBreakMinutes}m</span>
               ) : null}
             </div>
             <span className="finish-subtext">
               {appliedCompensation ? (
-                <span className="text-compensated">⚡ Compensated finish (-{appliedCompensation.deductMinutes}m {appliedCompensation.slotName}) · Targets {estimatedEnd ? formatClock(estimatedEnd) : "on time"}</span>
+                appliedCompensation.type === "rollover" ? (
+                  <span className="text-rollover">⚡ Rollover finish (+{appliedCompensation.bonusMinutes}m {appliedCompensation.slotName}) · Targets {estimatedEnd ? formatClock(estimatedEnd) : "on time"}</span>
+                ) : (
+                  <span className="text-compensated">⚡ Compensated finish (-{appliedCompensation.deductMinutes}m {appliedCompensation.slotName}) · Targets {estimatedEnd ? formatClock(estimatedEnd) : "on time"}</span>
+                )
               ) : totalExtraBreakMinutes > 0 ? (
                 <span className="text-danger">+{totalExtraBreakMinutes}m extra break · Work until {estimatedEnd ? formatClock(estimatedEnd) : "end"}</span>
               ) : (
@@ -2242,16 +2357,25 @@ export default function App() {
             </div>
             <div className="break-limit-chips">
               <span className="chip-label">Target:</span>
+              {activeBreakSlot && (activeBreakSlot.isRollover || activeBreakSlot.isCompensated) && (
+                <button
+                  type="button"
+                  className={`chip-target ${activeBreakLimitMinutes === activeBreakSlot.allowedMinutes ? "active" : ""}`}
+                  onClick={() => setCustomBreakLimit(activeBreakSlot.allowedMinutes)}
+                >
+                  {activeBreakSlot.allowedMinutes}m {activeBreakSlot.isRollover ? "Rollover" : "Preset"}
+                </button>
+              )}
               <button
                 type="button"
-                className={`chip-target ${activeBreakLimitMinutes === 15 ? "active" : ""}`}
+                className={`chip-target ${activeBreakLimitMinutes === 15 && (!activeBreakSlot || (!activeBreakSlot.isRollover && !activeBreakSlot.isCompensated)) ? "active" : ""}`}
                 onClick={() => setCustomBreakLimit(15)}
               >
                 15m Break
               </button>
               <button
                 type="button"
-                className={`chip-target ${activeBreakLimitMinutes === 30 ? "active" : ""}`}
+                className={`chip-target ${activeBreakLimitMinutes === 30 && (!activeBreakSlot || (!activeBreakSlot.isRollover && !activeBreakSlot.isCompensated)) ? "active" : ""}`}
                 onClick={() => setCustomBreakLimit(30)}
               >
                 30m Lunch
@@ -2349,14 +2473,19 @@ export default function App() {
           <p className="metric-label">Daily break schedule</p>
           <div className="break-slots-list">
             {breakSlotsData.slots.map((slot) => (
-              <div key={slot.id} className={`break-slot-item ${slot.isActiveNow ? "active-now" : ""} ${slot.isOver ? "slot-over" : ""} ${slot.isCompensated ? "is-compensated" : ""}`}>
+              <div key={slot.id} className={`break-slot-item ${slot.isActiveNow ? "active-now" : ""} ${slot.isOver ? "slot-over" : ""} ${slot.isRollover ? "is-rollover" : slot.isCompensated ? "is-compensated" : ""}`}>
                 <div className="slot-row-top">
                   <span className="slot-title">
                     <strong>{slot.shortName}</strong>
                     <small>{slot.windowLabel}</small>
                   </span>
                   <div className="slot-badges">
-                    {slot.isCompensated && (
+                    {slot.isRollover && (
+                      <span className="slot-rollover-badge" title={`Expanded by +${slot.bonusMinutes}m rollover from saved break (was ${slot.originalAllowedMinutes}m)`}>
+                        ⚡ +{slot.bonusMinutes}m rollover
+                      </span>
+                    )}
+                    {slot.isCompensated && !slot.isRollover && (
                       <span className="slot-compensated-badge" title={`Adjusted by 1-tap compensation preset (was ${slot.originalAllowedMinutes}m)`}>
                         ⚡ {slot.allowedMinutes}m preset
                       </span>
@@ -2372,7 +2501,7 @@ export default function App() {
                 </div>
                 <div className="slot-progress-track">
                   <div
-                    className={`slot-progress-bar ${slot.isOver ? "over" : ""}`}
+                    className={`slot-progress-bar ${slot.isOver ? "over" : slot.isRollover ? "rollover" : ""}`}
                     style={{ width: `${Math.min(100, (slot.usedMinutes / slot.allowedMinutes) * 100)}%` }}
                   />
                 </div>
@@ -2412,7 +2541,11 @@ export default function App() {
             <div className="compensation-applied-banner">
               <div className="applied-pill">
                 <Zap size={13} className="applied-zap-icon" />
-                <span><strong>Preset Active:</strong> {appliedCompensation.slotName} reduced to {appliedCompensation.targetMinutes}m (-{appliedCompensation.deductMinutes}m deducted)</span>
+                {appliedCompensation.type === "rollover" ? (
+                  <span><strong>Rollover Active:</strong> {appliedCompensation.slotName} expanded to {appliedCompensation.targetMinutes}m (+{appliedCompensation.bonusMinutes}m saved from {appliedCompensation.fromSlotName || "earlier break"})</span>
+                ) : (
+                  <span><strong>Preset Active:</strong> {appliedCompensation.slotName} reduced to {appliedCompensation.targetMinutes}m (-{appliedCompensation.deductMinutes}m deducted)</span>
+                )}
               </div>
               <button
                 type="button"
@@ -2429,6 +2562,7 @@ export default function App() {
             <div className="compensation-actions-list">
               {compensationAdvice.actionOptions.map((opt, i) => {
                 const isPresetOpt = Boolean(opt.preset);
+                const isRolloverOpt = opt.preset && opt.preset.type === "rollover";
                 return (
                   <div key={opt.id || i} className={`compensation-option-pill ${isPresetOpt ? "with-apply-action" : ""}`}>
                     <div className="option-text-group">
@@ -2438,12 +2572,12 @@ export default function App() {
                     {isPresetOpt && (
                       <button
                         type="button"
-                        className="btn-apply-preset"
+                        className={`btn-apply-preset ${isRolloverOpt ? "rollover-btn" : ""}`}
                         onClick={() => applyCompensationPreset(opt.preset)}
-                        title={`Adjust ${opt.preset.slotName} budget to ${opt.preset.targetMinutes}m`}
+                        title={isRolloverOpt ? `Roll over +${opt.preset.bonusMinutes}m to ${opt.preset.slotName}` : `Adjust ${opt.preset.slotName} budget to ${opt.preset.targetMinutes}m`}
                       >
                         <Zap size={12} />
-                        <span>Apply</span>
+                        <span>{isRolloverOpt ? "Roll Over" : "Apply"}</span>
                       </button>
                     )}
                   </div>

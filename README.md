@@ -10,7 +10,10 @@
 - **Split-Flap Airport Clock Display**: Real-time flip animation showing live working hours, minutes, and seconds.
 - **Offline Resilience (Zero Lost Punches)**: If connection drops in basements, parking lots, or elevators, punches save instantly to local cache (0ms response) and auto-sync to Google Sheets with original timestamps when connectivity restores.
 - **Smart Break Focus Timer & Vibration Alerts**: Visual countdown ring for 15m, 30m, or custom breaks. Vibrates your mobile device at 2 minutes remaining and at 0m so you never accidentally exceed your allowance.
-- **Smart Break Compensation Advisor**: If morning or lunch goes over allowance, the advisor dynamically calculates the exact adjustment needed for upcoming breaks and provides a **1-Tap `[⚡ Apply]`** preset to preserve your standard on-time finish!
+- **Smart Break Compensation & Savings Rollover Advisor**:
+  - **Overage Compensation**: If morning or lunch goes over allowance, the advisor calculates the exact adjustment needed for upcoming breaks and provides a **1-Tap `[⚡ Apply]`** preset to preserve your standard finish.
+  - **Savings Rollover (Break Banking)**: If you finish morning or lunch early (or skip a break), unused minutes are banked. The advisor offers a **1-Tap `[⚡ Roll Over]`** preset to add the saved time into your next break (e.g. Lunch becomes 30m → 37m) while keeping your total daily break within 60 minutes and maintaining an on-time finish.
+  - **Adaptive Focus Timer**: When rollover is active, the Smart Break Focus Timer countdown ring and chips dynamically adapt to your expanded limit.
 - **Late Punch & Custom Time Picker**: Forgot to punch in 20 minutes ago? Slide the interactive hour/minute swipe pickers or use quick nudge chips (`-15m`, `-30m`, `-1h`) to log the exact time you arrived.
 - **Full Punch Management**: Edit past punch timestamps, add missed punches, or delete accidental punches directly from the UI.
 - **Attendance Calendar & Discipline Streaks**: Track consecutive on-time workdays (meeting 8 hours with 0m break overage) and inspect daily details on a monthly calendar view.
