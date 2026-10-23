@@ -1167,6 +1167,183 @@ function TimeSwipePicker({ timeStr, onChange, idPrefix = "time-swipe" }) {
   );
 }
 
+function UnclosedShiftModal({ unclosedDay, onFinalize, onDismiss, isBusy }) {
+  if (!unclosedDay) return null;
+
+  const startMs = unclosedDay.firstPunch ? new Date(unclosedDay.firstPunch).getTime() : null;
+  const breakSec = unclosedDay.breakSeconds || 0;
+
+  // Calculate default suggested exit time: start + 8h work + break (or min 60m allowance)
+  const defaultExitTimeStr = useMemo(() => {
+    if (!startMs) return "18:00";
+    const totalSec = TARGET_SECONDS + Math.max(BREAK_ALLOWANCE_SECONDS, breakSec);
+    const exitDate = new Date(startMs + totalSec * 1000);
+    return getLocalTimeString(exitDate);
+  }, [startMs, breakSec]);
+
+  const [timeStr, setTimeStr] = useState(defaultExitTimeStr);
+  const [showAdvancedPicker, setShowAdvancedPicker] = useState(false);
+
+  // Compute preview work time dynamically based on selected exit time
+  const preview = useMemo(() => {
+    if (!startMs) return { workSec: 0, workFormatted: "0m", hitTarget: false, diffM: 0 };
+    const exitIso = timeStringToIso(timeStr, new Date(unclosedDay.date + "T12:00:00"));
+    const exitMs = new Date(exitIso).getTime();
+    const totalSec = Math.max(0, (exitMs - startMs) / 1000);
+    const workSec = Math.max(0, totalSec - breakSec);
+    const hitTarget = workSec >= TARGET_SECONDS;
+    const diffM = Math.round(Math.abs(workSec - TARGET_SECONDS) / 60);
+    return {
+      workSec,
+      workFormatted: formatDuration(workSec),
+      hitTarget,
+      isOver: workSec > TARGET_SECONDS,
+      diffM
+    };
+  }, [startMs, breakSec, timeStr, unclosedDay.date]);
+
+  const dateLabel = useMemo(() => {
+    try {
+      const d = new Date(unclosedDay.date + "T12:00:00");
+      return d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+    } catch (e) {
+      return unclosedDay.date;
+    }
+  }, [unclosedDay.date]);
+
+  const handleApplyNudge = (deltaMinutes) => {
+    const [h, m] = (timeStr || "18:00").split(":").map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    d.setMinutes(d.getMinutes() + deltaMinutes);
+    setTimeStr(getLocalTimeString(d));
+  };
+
+  const handleConfirm = () => {
+    const exitIso = timeStringToIso(timeStr, new Date(unclosedDay.date + "T12:00:00"));
+    onFinalize(unclosedDay, exitIso);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onDismiss}>
+      <div className="modal-box unclosed-shift-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header unclosed-header">
+          <div className="unclosed-title-group">
+            <span className="unclosed-alert-icon"><AlertTriangle size={18} /></span>
+            <div>
+              <span className="unclosed-eyebrow">EXIT PUNCH SAFETY NET</span>
+              <h3>Unclosed Shift Detected</h3>
+            </div>
+          </div>
+          <button type="button" className="modal-close" onClick={onDismiss} aria-label="Dismiss">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          <div className="unclosed-banner">
+            <p>
+              It looks like you forgot to punch out on <strong>{dateLabel}</strong>! That shift is still marked as active in your Google Sheet attendance records.
+            </p>
+          </div>
+
+          <div className="unclosed-summary-grid">
+            <div className="unclosed-metric">
+              <span className="unclosed-metric-label">Punched In</span>
+              <strong>{formatClock(unclosedDay.firstPunch)}</strong>
+            </div>
+            <div className="unclosed-metric">
+              <span className="unclosed-metric-label">Breaks Taken</span>
+              <strong>{formatDuration(breakSec)}</strong>
+            </div>
+            <div className="unclosed-metric">
+              <span className="unclosed-metric-label">Last Punch</span>
+              <strong>{formatClock(unclosedDay.lastPunch)}</strong>
+            </div>
+          </div>
+
+          <div className="unclosed-time-picker-section">
+            <label className="unclosed-input-label">
+              <span>What time did you leave?</span>
+              <span className="unclosed-time-display">{formatClock(timeStringToIso(timeStr, new Date()))}</span>
+            </label>
+
+            <div className="unclosed-quick-chips">
+              <button type="button" className="unclosed-chip" onClick={() => handleApplyNudge(-30)}>−30m</button>
+              <button type="button" className="unclosed-chip" onClick={() => handleApplyNudge(-15)}>−15m</button>
+              <button type="button" className={`unclosed-chip ${timeStr === defaultExitTimeStr ? "active" : ""}`} onClick={() => setTimeStr(defaultExitTimeStr)}>
+                🎯 Target 8h ({defaultExitTimeStr})
+              </button>
+              <button type="button" className="unclosed-chip" onClick={() => handleApplyNudge(+15)}>+15m</button>
+              <button type="button" className="unclosed-chip" onClick={() => handleApplyNudge(+30)}>+30m</button>
+            </div>
+
+            <div className="unclosed-preview-banner">
+              <div className="unclosed-preview-stat">
+                <span>Resulting Work Time:</span>
+                <strong>{preview.workFormatted}</strong>
+              </div>
+              <div className={`unclosed-status-pill ${preview.hitTarget ? "goal-met" : "under-goal"}`}>
+                {preview.hitTarget
+                  ? (preview.diffM > 0 ? `🎯 8h Goal Met (+${preview.diffM}m)` : "🎯 8h Goal Met!")
+                  : `⚠️ -${preview.diffM}m under 8h`}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="toggle-advanced-picker-btn"
+              onClick={() => setShowAdvancedPicker(!showAdvancedPicker)}
+            >
+              <Clock size={13} />
+              <span>{showAdvancedPicker ? "Hide Slider Controls" : "Adjust Exact Hour / Minute via Slider"}</span>
+            </button>
+
+            {showAdvancedPicker && (
+              <div className="advanced-picker-wrapper">
+                <TimeSwipePicker
+                  timeStr={timeStr}
+                  onChange={(t) => setTimeStr(t)}
+                  idPrefix="unclosed-modal"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="modal-footer unclosed-footer">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onDismiss}
+            disabled={isBusy}
+          >
+            Remind Later
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary finalize-unclosed-btn"
+            onClick={handleConfirm}
+            disabled={isBusy}
+          >
+            {isBusy ? (
+              <>
+                <RefreshCw size={14} className="spin" />
+                <span>Finalizing...</span>
+              </>
+            ) : (
+              <>
+                <Zap size={14} />
+                <span>Finalize Punch-Out at {formatClock(timeStringToIso(timeStr, new Date()))}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0, weeklyStats = null }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -1812,16 +1989,17 @@ export default function App() {
   // 8-Hour Daily Goal Reached Celebration Milestone
   const [showGoalBurst, setShowGoalBurst] = useState(false);
   const fired8hAlertRef = useRef(false);
+  const firedExitReminderRef = useRef(false);
 
   const triggerGoalCelebration = useCallback((isManualTest = false) => {
-    triggerVibrate([300, 150, 300, 150, 500]);
+    triggerVibrate([400, 150, 400, 150, 600]);
     playCelebrationChime();
     sendGoalNotification(
-      "🎉 Shiftly: 8-Hour Goal Reached!",
-      "Congratulations! You completed your 8-hour daily work target. Ready to wrap up or punch out."
+      "🎉 8 Hours Complete! Don't forget to Punch Out!",
+      "Congratulations! You completed your 8-hour daily work target. Ready to wrap up and punch out before leaving!"
     );
     setShowGoalBurst(true);
-    setNotice(isManualTest ? "🎉 Replaying 8-Hour Goal Celebration!" : "🎉 8-Hour Daily Target Completed! Outstanding work today.");
+    setNotice(isManualTest ? "🎉 Replaying 8-Hour Goal Celebration!" : "🎉 8-Hour Daily Target Completed! Outstanding work today. Remember to Punch Out.");
   }, []);
 
   // Automatic trigger the exact moment summary.workSeconds reaches TARGET_SECONDS
@@ -1840,6 +2018,95 @@ export default function App() {
       triggerGoalCelebration(false);
     }
   }, [summary.workSeconds, summary.status, triggerGoalCelebration]);
+
+  // Proactive exit reminder when estimated shift finish time arrives
+  useEffect(() => {
+    if (summary.status !== "WORKING") return;
+    if (!estimatedEnd) return;
+
+    const nowMs = now;
+    const estMs = new Date(estimatedEnd).getTime();
+
+    if (nowMs >= estMs && !firedExitReminderRef.current) {
+      firedExitReminderRef.current = true;
+      triggerVibrate([400, 150, 400, 150, 600]);
+      playCelebrationChime();
+      sendGoalNotification(
+        "🏁 Shiftly: Exit Time Reached!",
+        "Your shift end time has arrived! Don't forget to Punch Out before leaving the office."
+      );
+      setNotice("🏁 Your scheduled shift end time has arrived! Remember to Punch Out before leaving.");
+    }
+  }, [now, estimatedEnd, summary.status]);
+
+  // Unclosed Past Shift Detector State (Safety Net)
+  const [dismissedUnclosedDate, setDismissedUnclosedDate] = useState(() => {
+    try {
+      return sessionStorage.getItem("shiftly_dismissed_unclosed") || "";
+    } catch (e) {
+      return "";
+    }
+  });
+  const [isFinalizingUnclosed, setIsFinalizingUnclosed] = useState(false);
+
+  const unclosedPastDay = useMemo(() => {
+    if (!history || history.length === 0) return null;
+    const today = todayKey();
+    return (
+      history.find((day) => {
+        const isPast = day.date < today;
+        const isUnclosed = day.status === "WORKING" || day.status === "ON_BREAK" || (day.workSeconds > 0 && day.status !== "COMPLETED");
+        return isPast && isUnclosed;
+      }) || null
+    );
+  }, [history]);
+
+  const shouldShowUnclosedModal = Boolean(unclosedPastDay && unclosedPastDay.date !== dismissedUnclosedDate);
+
+  const handleDismissUnclosed = useCallback(() => {
+    if (unclosedPastDay) {
+      setDismissedUnclosedDate(unclosedPastDay.date);
+      try {
+        sessionStorage.setItem("shiftly_dismissed_unclosed", unclosedPastDay.date);
+      } catch (e) {}
+    }
+  }, [unclosedPastDay]);
+
+  const handleFinalizeUnclosed = useCallback(async (pastDay, exitTimestampIso) => {
+    setIsFinalizingUnclosed(true);
+    setError("");
+    try {
+      const response = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "END_DAY",
+          timestamp: exitTimestampIso,
+          force: true,
+          accessCode
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || "Could not finalize past shift.");
+
+      if (data.history) {
+        setHistory(data.history);
+      }
+
+      setDismissedUnclosedDate(pastDay.date);
+      try {
+        sessionStorage.setItem("shiftly_dismissed_unclosed", pastDay.date);
+      } catch (e) {}
+
+      triggerVibrate([300, 100, 300]);
+      playCelebrationChime();
+      setNotice(`✅ Shift for ${pastDay.date} successfully finalized! Punch-out logged at ${formatClock(exitTimestampIso)}.`);
+    } catch (err) {
+      setError(err.message || "Failed to finalize past shift.");
+    } finally {
+      setIsFinalizingUnclosed(false);
+    }
+  }, [accessCode]);
 
 
   async function login(event) {
@@ -2170,6 +2437,14 @@ export default function App() {
     <main className="shell">
       {showBootLoader && <ShiftlyBootLoader targetRef={brandMarkRef} onFinish={handleBootFinish} />}
       {showGoalBurst && <GoalConfettiBurst onDismiss={() => setShowGoalBurst(false)} />}
+      {shouldShowUnclosedModal && (
+        <UnclosedShiftModal
+          unclosedDay={unclosedPastDay}
+          onFinalize={handleFinalizeUnclosed}
+          onDismiss={handleDismissUnclosed}
+          isBusy={isFinalizingUnclosed}
+        />
+      )}
       <header className="topbar">
         <a className="brand" href="/" aria-label="Shiftly home">
           <span className={`brand-mark ${justDocked ? "just-docked" : ""}`} ref={brandMarkRef}><Zap size={18} /></span>
@@ -2288,22 +2563,22 @@ export default function App() {
         </div>
 
         {/* 1-Tap Quick Wrap Up / Punch Out Prompt when goal is hit and still working */}
-        {summary.workSeconds >= TARGET_SECONDS && summary.status === "IN_PROGRESS" && (
+        {summary.workSeconds >= TARGET_SECONDS && (summary.status === "WORKING" || summary.status === "ON_BREAK") && (
           <div className="goal-achieved-callout">
             <div className="goal-callout-info">
-              <span className="goal-trophy">🏆</span>
+              <span className="goal-trophy">🎉</span>
               <div>
-                <strong>8-Hour Shift Goal Accomplished!</strong>
-                <span>You have satisfied your workday hours. Ready to punch out?</span>
+                <strong>8-Hour Shift Target Reached!</strong>
+                <span>You've satisfied your 8-hour workday. Remember to Punch Out before leaving!</span>
               </div>
             </div>
             <button
               type="button"
               className="goal-punchout-btn"
-              onClick={() => handlePunch("END_DAY")}
+              onClick={() => punch("END_DAY")}
               disabled={loading || busy}
             >
-              <ArrowDownToLine size={14} /> Punch Out Now
+              <ArrowDownToLine size={15} /> Punch Out Now
             </button>
           </div>
         )}

@@ -14,6 +14,10 @@
   - **Overage Compensation**: If morning or lunch goes over allowance, the advisor calculates the exact adjustment needed for upcoming breaks and provides a **1-Tap `[⚡ Apply]`** preset to preserve your standard finish.
   - **Savings Rollover (Break Banking)**: If you finish morning or lunch early (or skip a break), unused minutes are banked. The advisor offers a **1-Tap `[⚡ Roll Over]`** preset to add the saved time into your next break (e.g. Lunch becomes 30m → 37m) while keeping your total daily break within 60 minutes and maintaining an on-time finish.
   - **Adaptive Focus Timer**: When rollover is active, the Smart Break Focus Timer countdown ring and chips dynamically adapt to your expanded limit.
+- **🛡️ Exit Punch Safety Net (Zero Missed Punch-Outs)**:
+  - **Shift Complete & Exit Alarms**: When your 8-hour work target or scheduled exit time is reached, Shiftly triggers an audio arpeggio chime, vibration alert, and desktop notification reminding you to punch out before leaving.
+  - **1-Tap Quick Wrap-Up Bar**: A prominent, tactile callout appears in the hero card with a direct **`[⬇ Punch Out Now]`** action.
+  - **Next-Day Unclosed Shift Detector**: If you open Shiftly the next day and a past shift was left unclosed, an interactive modal automatically detects the missing punch, calculates your suggested target exit time (with quick nudge chips `-15m`/`+15m` and granular time sliders), and lets you **`[⚡ 1-Tap Finalize]`** the shift to protect your 8-hour goal and streak!
 - **Late Punch & Custom Time Picker**: Forgot to punch in 20 minutes ago? Slide the interactive hour/minute swipe pickers or use quick nudge chips (`-15m`, `-30m`, `-1h`) to log the exact time you arrived.
 - **Full Punch Management**: Edit past punch timestamps, add missed punches, or delete accidental punches directly from the UI.
 - **Attendance Calendar & Discipline Streaks**: Track consecutive on-time workdays (meeting 8 hours with 0m break overage) and inspect daily details on a monthly calendar view.
