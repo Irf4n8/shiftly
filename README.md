@@ -21,7 +21,11 @@
 - **Late Punch & Custom Time Picker**: Forgot to punch in 20 minutes ago? Slide the interactive hour/minute swipe pickers or use quick nudge chips (`-15m`, `-30m`, `-1h`) to log the exact time you arrived.
 - **Full Punch Management**: Edit past punch timestamps, add missed punches, or delete accidental punches directly from the UI.
 - **Attendance Calendar & Discipline Streaks**: Track consecutive on-time workdays (meeting 8 hours with 0m break overage) and inspect daily details on a monthly calendar view.
-- **Analytics & CSV Export**: Weekly bar charts comparing work vs. break time against the 8-hour target line, plus 1-click CSV export of historical records.
+- **🌴 Leave & Day Off Manager (Alternate Saturdays & Streak Protection)**:
+  - **Streak Exemption Engine**: Sundays and approved leaves (including 2nd, 4th, and 5th alternate off-Saturdays, casual leaves, sick leaves, and public holidays) are exempt from streak requirements so taking scheduled time off never breaks your streak.
+  - **1-Tap `[⚡ Alternate Saturdays Fill]`**: Instantly adds the 2nd, 4th, and 5th Saturdays of the current month with one tap.
+  - **Contextual Hero Card**: On scheduled leave days, Shiftly displays a relaxed leave banner with options to manage leaves or start a shift anyway.
+  - **Full Leave Management**: Pick custom dates, select categories (Casual, Sick, Holiday, Alternate Saturday, Comp-Off), add notes, and delete past leaves with 0ms offline storage + Google Sheets sync.
 - **Neo-Brutalist Light & Dark Themes**: Handcrafted high-contrast palettes with tactile 3D offset hard shadows and instantaneous 1-tap switching.
 - **100% Free & Serverless**: Hosted on Vercel with Google Sheets as your private database. No monthly subscription or database hosting fees.
 

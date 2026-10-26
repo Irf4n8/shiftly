@@ -4,7 +4,7 @@ import {
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
   Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
   BarChart3, Scale, AlertTriangle, ShieldCheck, Compass, Info,
-  Bell, BellRing, Smartphone, Check, RotateCcw
+  Bell, BellRing, Smartphone, Check, RotateCcw, Palmtree, CalendarCheck
 } from "lucide-react";
 
 const TARGET_SECONDS = 8 * 60 * 60;
@@ -459,11 +459,70 @@ function todayKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+const LEAVE_TYPES = [
+  { id: "alternate_saturday", label: "Alternate Saturday Off", icon: "🌴", desc: "2nd, 4th, or 5th Saturday scheduled rest day" },
+  { id: "casual", label: "Casual Leave (CL)", icon: "🏖️", desc: "Approved casual day off" },
+  { id: "sick", label: "Sick Leave (SL)", icon: "🤒", desc: "Medical / health recovery" },
+  { id: "holiday", label: "Public / Festival Holiday", icon: "🎆", desc: "Official public or company holiday" },
+  { id: "compoff", label: "Compensatory Off (Comp-Off)", icon: "💼", desc: "Comp-off for weekend or extra shift worked" },
+  { id: "other", label: "Personal Time Off", icon: "📝", desc: "Other scheduled absence" },
+];
+
+/**
+ * Returns true if the Saturday is 2nd, 4th, or 5th Saturday of the month.
+ */
+function isOffSaturday(date) {
+  if (!date || date.getDay() !== 6) return false;
+  const nthSaturday = Math.ceil(date.getDate() / 7);
+  return nthSaturday === 2 || nthSaturday === 4 || nthSaturday === 5;
+}
+
+/**
+ * Generates the 2nd, 4th, and 5th Saturdays for a given month and year.
+ */
+function getOffSaturdaysForMonth(year, monthIndex) {
+  const saturdays = [];
+  const date = new Date(year, monthIndex, 1, 12, 0, 0);
+  while (date.getMonth() === monthIndex) {
+    if (date.getDay() === 6) {
+      saturdays.push(new Date(date));
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  const result = [];
+  if (saturdays[1]) {
+    result.push({
+      date: todayKey(saturdays[1]),
+      type: "alternate_saturday",
+      label: "2nd Saturday Off",
+      note: "Scheduled rest day"
+    });
+  }
+  if (saturdays[3]) {
+    result.push({
+      date: todayKey(saturdays[3]),
+      type: "alternate_saturday",
+      label: "4th Saturday Off",
+      note: "Scheduled rest day"
+    });
+  }
+  if (saturdays[4]) {
+    result.push({
+      date: todayKey(saturdays[4]),
+      type: "alternate_saturday",
+      label: "5th Saturday Off",
+      note: "Scheduled rest day"
+    });
+  }
+  return result;
+}
+
 /**
  * Calculates consecutive workday streak meeting ≥8h work and 0m break overage.
- * Excludes weekends so Friday-to-Monday continuity is rewarded.
+ * Excludes Sundays, scheduled alternate off-Saturdays (2nd, 4th, 5th), and approved leaves.
+ * 1st and 3rd Saturdays count as working days!
  */
-function calculateStreak(history = [], currentSeconds = 0, currentBreakSeconds = 0) {
+function calculateStreak(history = [], currentSeconds = 0, currentBreakSeconds = 0, leaves = []) {
   let streak = 0;
 
   // Check today: if today already reached 8h work and has 0m break overage, today counts!
@@ -481,14 +540,33 @@ function calculateStreak(history = [], currentSeconds = 0, currentBreakSeconds =
   let checkDate = new Date();
   checkDate.setDate(checkDate.getDate() - 1);
 
+  // Helper to determine if a date is exempt from streak requirements
+  const isDateExempt = (d) => {
+    const key = todayKey(d);
+    // Any date explicitly marked in user's leaves list
+    if (leaves && leaves.some((l) => l.date === key)) return true;
+    // Any date in history with status LEAVE
+    if (sorted.some((h) => h.date === key && h.status === "LEAVE")) return true;
+    // All Sundays (0) are exempt
+    if (d.getDay() === 0) return true;
+    // 2nd, 4th, and 5th Saturdays are exempt
+    if (isOffSaturday(d)) return true;
+    return false;
+  };
+
   for (const day of sorted) {
-    // Skip weekends when walking back consecutive workdays
-    while (checkDate.getDay() === 0 || checkDate.getDay() === 6) {
+    // Skip exempt days (Sundays, alternate off-Saturdays, or manual approved leaves)
+    while (isDateExempt(checkDate)) {
       checkDate.setDate(checkDate.getDate() - 1);
     }
     const targetKey = todayKey(checkDate);
 
     if (day.date === targetKey) {
+      if (day.status === "LEAVE") {
+        checkDate.setDate(checkDate.getDate() - 1);
+        continue;
+      }
+
       const workSec = day.workSeconds || 0;
       const breakSec = day.breakSeconds || 0;
       const hitTarget = workSec >= TARGET_SECONDS;
@@ -1344,7 +1422,246 @@ function UnclosedShiftModal({ unclosedDay, onFinalize, onDismiss, isBusy }) {
   );
 }
 
-function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0, weeklyStats = null }) {
+function LeaveModal({
+  isOpen,
+  onClose,
+  leaves = [],
+  onAddLeave,
+  onRemoveLeave,
+  onAutoFillSaturdays,
+  busy = false
+}) {
+  if (!isOpen) return null;
+
+  const [activeTab, setActiveTab] = useState("add"); // "add" | "manage"
+  const [selectedDate, setSelectedDate] = useState(() => todayKey());
+  const [leaveType, setLeaveType] = useState("alternate_saturday");
+  const [note, setNote] = useState("");
+
+  const currentMonthSaturdays = useMemo(() => {
+    const now = new Date();
+    return getOffSaturdaysForMonth(now.getFullYear(), now.getMonth());
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedDate) return;
+    const typeObj = LEAVE_TYPES.find((t) => t.id === leaveType) || LEAVE_TYPES[0];
+    onAddLeave(selectedDate, leaveType, typeObj.label, note.trim());
+    setNote("");
+  };
+
+  const handleApplyPresetDate = (deltaDays) => {
+    const d = new Date();
+    d.setDate(d.getDate() + deltaDays);
+    setSelectedDate(todayKey(d));
+  };
+
+  const sortedLeaves = useMemo(() => {
+    return [...leaves].sort((a, b) => b.date.localeCompare(a.date));
+  }, [leaves]);
+
+  return (
+    <div className="modal-overlay" onClick={() => !busy && onClose()}>
+      <div className="modal-box leave-modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" />
+        <div className="modal-header">
+          <div className="leave-modal-title">
+            <span className="leave-modal-icon"><Palmtree size={18} /></span>
+            <div>
+              <span className="modal-eyebrow">SCHEDULE & TIME OFF</span>
+              <h3>Leave & Day Off Manager</h3>
+            </div>
+          </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close modal">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Modal Tabs */}
+        <div className="leave-modal-tabs">
+          <button
+            type="button"
+            className={`leave-tab-btn ${activeTab === "add" ? "active" : ""}`}
+            onClick={() => setActiveTab("add")}
+          >
+            <span>+ Log New Leave</span>
+          </button>
+          <button
+            type="button"
+            className={`leave-tab-btn ${activeTab === "manage" ? "active" : ""}`}
+            onClick={() => setActiveTab("manage")}
+          >
+            <span>Logged Leaves ({leaves.length})</span>
+          </button>
+        </div>
+
+        <div className="modal-body leave-modal-body">
+          {activeTab === "add" ? (
+            <form onSubmit={handleSubmit} className="leave-form">
+              {/* Quick 1-Tap Alternate Saturday Auto-Filler */}
+              <div className="saturday-autofill-banner">
+                <div className="autofill-text">
+                  <div className="autofill-header">
+                    <Sparkles size={14} />
+                    <strong>Alternate Saturdays Quick-Fill</strong>
+                  </div>
+                  <p>
+                    Auto-add this month's 2nd, 4th & 5th Saturdays (
+                    {currentMonthSaturdays.map((s) => s.date.slice(5)).join(", ")}
+                    ) as approved off-days.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="autofill-btn"
+                  onClick={onAutoFillSaturdays}
+                  disabled={busy}
+                >
+                  <Zap size={13} /> 1-Tap Fill
+                </button>
+              </div>
+
+              {/* Date Selection */}
+              <div className="modal-field">
+                <label htmlFor="leave-date-input">Select Date:</label>
+                <div className="date-input-wrap">
+                  <input
+                    id="leave-date-input"
+                    type="date"
+                    className="select-input leave-date-input"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    required
+                  />
+                  <div className="quick-date-chips">
+                    <button
+                      type="button"
+                      className={`chip-btn ${selectedDate === todayKey() ? "active" : ""}`}
+                      onClick={() => handleApplyPresetDate(0)}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      className="chip-btn"
+                      onClick={() => handleApplyPresetDate(1)}
+                    >
+                      Tomorrow
+                    </button>
+                    <button
+                      type="button"
+                      className="chip-btn"
+                      onClick={() => handleApplyPresetDate(-1)}
+                    >
+                      Yesterday
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Leave Category Chips */}
+              <div className="modal-field">
+                <label>Leave Reason / Category:</label>
+                <div className="leave-type-grid">
+                  {LEAVE_TYPES.map((t) => {
+                    const isSelected = leaveType === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`leave-type-card ${isSelected ? "selected" : ""}`}
+                        onClick={() => setLeaveType(t.id)}
+                      >
+                        <span className="leave-type-icon">{t.icon}</span>
+                        <div className="leave-type-meta">
+                          <strong>{t.label}</strong>
+                          <small>{t.desc}</small>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Optional Custom Note */}
+              <div className="modal-field">
+                <label htmlFor="leave-note-input">Optional Note / Reason:</label>
+                <input
+                  id="leave-note-input"
+                  type="text"
+                  className="select-input"
+                  placeholder="e.g. 2nd Saturday rest, Diwali holiday, Family trip..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={60}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={onClose}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary leave-submit-btn"
+                  disabled={busy || !selectedDate}
+                >
+                  <Palmtree size={14} />
+                  <span>{busy ? "Saving…" : "Save Leave"}</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="leaves-list-wrap">
+              {sortedLeaves.length === 0 ? (
+                <div className="empty-state">
+                  <Palmtree size={28} />
+                  <strong>No leaves recorded yet</strong>
+                  <span>Log your 2nd/4th Saturdays or personal time off to keep your streak intact.</span>
+                </div>
+              ) : (
+                <div className="leaves-table">
+                  {sortedLeaves.map((l) => {
+                    const typeObj = LEAVE_TYPES.find((t) => t.id === l.type) || { icon: "🌴", label: l.label || "Leave" };
+                    return (
+                      <div className="leave-item-row" key={l.date}>
+                        <div className="leave-item-icon">{typeObj.icon}</div>
+                        <div className="leave-item-info">
+                          <div className="leave-item-title-row">
+                            <strong>{l.date}</strong>
+                            <span className="leave-type-pill">{l.label || typeObj.label}</span>
+                          </div>
+                          {l.note && <span className="leave-item-note">"{l.note}"</span>}
+                        </div>
+                        <button
+                          type="button"
+                          className="icon-btn danger"
+                          title="Remove this leave"
+                          onClick={() => onRemoveLeave(l.date)}
+                          disabled={busy}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBreakSeconds = 0, weeklyStats = null, leaves = [] }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
   const daysData = useMemo(() => {
@@ -1357,6 +1674,11 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
       const isToday = i === 0;
 
       const match = (history || []).find((h) => h.date === key);
+      const leaveEntry = (leaves || []).find((l) => l.date === key);
+      const isLeave = Boolean(leaveEntry || (match && match.status === "LEAVE"));
+      const leaveLabel = leaveEntry ? leaveEntry.label : (match && match.lastPunch ? match.lastPunch : "Approved Leave");
+      const leaveNote = leaveEntry ? leaveEntry.note : "";
+
       let workSec = 0;
       let breakSec = 0;
       let status = "NO_DATA";
@@ -1364,11 +1686,13 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
       if (isToday) {
         workSec = currentSeconds;
         breakSec = currentBreakSeconds;
-        status = "TODAY";
+        status = isLeave && workSec === 0 ? "LEAVE" : "TODAY";
       } else if (match) {
         workSec = match.workSeconds || 0;
         breakSec = match.breakSeconds || 0;
-        status = match.status || "COMPLETED";
+        status = isLeave && workSec === 0 ? "LEAVE" : (match.status || "COMPLETED");
+      } else if (isLeave) {
+        status = "LEAVE";
       }
 
       const totalSec = workSec + breakSec;
@@ -1391,11 +1715,14 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
         breakHours,
         totalHours,
         status,
-        hitTarget
+        hitTarget,
+        isLeave,
+        leaveLabel,
+        leaveNote
       });
     }
     return list;
-  }, [history, currentSeconds, currentBreakSeconds]);
+  }, [history, currentSeconds, currentBreakSeconds, leaves]);
 
   // Summary calculations
   const totalWorkedSeconds = daysData.reduce((acc, d) => acc + d.workSec, 0);
@@ -1467,6 +1794,7 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
               <span className="legend-item"><span className="legend-swatch work-partial" /> Work Time</span>
               <span className="legend-item"><span className="legend-swatch break-swatch" /> Break Time</span>
               <span className="legend-item"><span className="legend-swatch hit" /> ≥ 8h Goal</span>
+              <span className="legend-item"><span className="legend-swatch leave-swatch" /> Leave / Off</span>
             </div>
             <span className="chart-goal-label">--- 8H GOAL ---</span>
           </div>
@@ -1487,14 +1815,18 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
                 return (
                   <div
                     key={d.dateKey}
-                    className={`chart-bar-col ${d.isToday ? "is-today" : ""} ${isSelected ? "selected" : ""}`}
+                    className={`chart-bar-col ${d.isToday ? "is-today" : ""} ${isSelected ? "selected" : ""} ${d.status === "LEAVE" ? "is-leave" : ""}`}
                     onClick={() => setSelectedDay(isSelected ? null : d)}
                   >
                     <div className="bar-value-pill">
-                      {d.hours > 0 ? `${d.hours}h` : d.breakHours > 0 ? `${d.breakHours}h` : "—"}
+                      {d.status === "LEAVE" ? "🌴" : d.hours > 0 ? `${d.hours}h` : d.breakHours > 0 ? `${d.breakHours}h` : "—"}
                     </div>
                     <div className="bar-track">
-                      {d.totalSec === 0 ? (
+                      {d.status === "LEAVE" ? (
+                        <div className="bar-stack leave-stack" style={{ height: "45%" }} title={`Leave: ${d.leaveLabel || "Approved Day Off"}`}>
+                          <span className="bar-leave-tag">OFF</span>
+                        </div>
+                      ) : d.totalSec === 0 ? (
                         <div className="bar-stack empty" style={{ height: "6px" }} />
                       ) : (
                         <div className="bar-stack" style={{ height: `${barHeightPercent}%` }}>
@@ -1530,15 +1862,28 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
             <div className="chart-detail-box">
               <div className="detail-date">
                 <strong>{selectedDay.dayName}, {selectedDay.dateFormatted}</strong>
-                <span className={`detail-status ${selectedDay.hitTarget ? "hit" : ""}`}>
-                  {selectedDay.hitTarget ? "Target Reached (≥8h)" : selectedDay.hours > 0 ? "Under Target" : "No Shift Recorded"}
+                <span className={`detail-status ${selectedDay.status === "LEAVE" ? "leave" : selectedDay.hitTarget ? "hit" : ""}`}>
+                  {selectedDay.status === "LEAVE"
+                    ? `🌴 ${selectedDay.leaveLabel || "Approved Leave / Rest Day"}`
+                    : selectedDay.hitTarget
+                    ? "Target Reached (≥8h)"
+                    : selectedDay.hours > 0
+                    ? "Under Target"
+                    : "No Shift Recorded"}
                 </span>
               </div>
-              <div className="detail-stats">
-                <span className="stat-pill"><span className="legend-dot work-dot" /> Work: <b>{formatDuration(selectedDay.workSec)}</b></span>
-                <span className="stat-pill"><span className="legend-dot break-dot" /> Break: <b>{selectedDay.breakSec > 0 ? formatDuration(selectedDay.breakSec) : "0m (None taken)"}</b></span>
-                <span className="stat-pill">Total: <b>{formatDuration(selectedDay.totalSec || (selectedDay.workSec + selectedDay.breakSec))}</b></span>
-              </div>
+              {selectedDay.status === "LEAVE" ? (
+                <div className="detail-leave-box">
+                  <p>🏖️ Scheduled day off. Streak protected with no shift required.</p>
+                  {selectedDay.leaveNote && <span className="detail-leave-note">Note: "{selectedDay.leaveNote}"</span>}
+                </div>
+              ) : (
+                <div className="detail-stats">
+                  <span className="stat-pill"><span className="legend-dot work-dot" /> Work: <b>{formatDuration(selectedDay.workSec)}</b></span>
+                  <span className="stat-pill"><span className="legend-dot break-dot" /> Break: <b>{selectedDay.breakSec > 0 ? formatDuration(selectedDay.breakSec) : "0m (None taken)"}</b></span>
+                  <span className="stat-pill">Total: <b>{formatDuration(selectedDay.totalSec || (selectedDay.workSec + selectedDay.breakSec))}</b></span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1546,27 +1891,35 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
         {/* Recent Shifts Mini Table */}
         <div className="recent-shifts-wrap">
           <div className="recent-shifts-header">
-            <h4>Recent recorded shifts</h4>
+            <h4>Recent recorded activity</h4>
             <span className="recent-count">Auto-synced from Google Sheets</span>
           </div>
           <div className="recent-shifts-list">
-            {daysData.filter((d) => d.workSec > 0).map((d) => (
-              <div className="shift-row" key={`recent-${d.dateKey}`}>
+            {daysData.filter((d) => d.workSec > 0 || d.status === "LEAVE").map((d) => (
+              <div className={`shift-row ${d.status === "LEAVE" ? "leave-row" : ""}`} key={`recent-${d.dateKey}`}>
                 <div className="shift-row-date">
                   <strong>{d.dayName}</strong>
                   <span>{d.dateFormatted}</span>
                 </div>
                 <div className="shift-row-bar">
-                  <div className="shift-mini-track">
-                    <div
-                      className={`shift-mini-fill ${d.hitTarget ? "hit" : ""}`}
-                      style={{ width: `${Math.min(100, (d.workSec / (8 * 3600)) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="shift-hours-text">{formatDuration(d.workSec)}</span>
+                  {d.status === "LEAVE" ? (
+                    <span className="shift-leave-label">🌴 {d.leaveLabel || "Approved Leave"} {d.leaveNote ? `(${d.leaveNote})` : ""}</span>
+                  ) : (
+                    <>
+                      <div className="shift-mini-track">
+                        <div
+                          className={`shift-mini-fill ${d.hitTarget ? "hit" : ""}`}
+                          style={{ width: `${Math.min(100, (d.workSec / (8 * 3600)) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="shift-hours-text">{formatDuration(d.workSec)}</span>
+                    </>
+                  )}
                 </div>
                 <div className="shift-row-badge">
-                  {d.hitTarget ? (
+                  {d.status === "LEAVE" ? (
+                    <span className="badge-leave">Day Off</span>
+                  ) : d.hitTarget ? (
                     <span className="badge-hit">8h+ Goal Met</span>
                   ) : d.breakSec > 0 ? (
                     <span className="badge-partial">{formatDuration(d.breakSec)} break</span>
@@ -1890,10 +2243,116 @@ export default function App() {
     return generateCompensationAdvice(breakSlotsData, summary, standardEnd, estimatedEnd, appliedCompensation);
   }, [breakSlotsData, summary, standardEnd, estimatedEnd, appliedCompensation]);
 
+  // Leave State & Management
+  const [leaves, setLeaves] = useState(() => {
+    try {
+      const stored = localStorage.getItem("shiftly_leaves");
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("shiftly_leaves", JSON.stringify(leaves));
+    } catch (e) {}
+  }, [leaves]);
+
+  const todayIsLeave = useMemo(() => {
+    return leaves.find((l) => l.date === todayKey());
+  }, [leaves]);
+
+  const handleAddLeave = useCallback(async (dateKey, type, label, note) => {
+    const newEntry = { date: dateKey, type, label, note };
+    setLeaves((prev) => {
+      const filtered = prev.filter((l) => l.date !== dateKey);
+      return [newEntry, ...filtered].sort((a, b) => b.date.localeCompare(a.date));
+    });
+
+    setNotice(`🌴 Leave recorded for ${dateKey} (${label})`);
+    triggerVibrate([100, 50, 100]);
+
+    if (accessCode) {
+      try {
+        const response = await fetch("/api/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "SET_LEAVE",
+            dateKey,
+            leaveType: label || type,
+            note: note || "",
+            accessCode
+          })
+        });
+        const data = await response.json();
+        if (data.history) {
+          setHistory(data.history);
+        }
+      } catch (e) {}
+    }
+  }, [accessCode]);
+
+  const handleRemoveLeave = useCallback(async (dateKey) => {
+    setLeaves((prev) => prev.filter((l) => l.date !== dateKey));
+    setNotice(`Leave removed for ${dateKey}`);
+
+    if (accessCode) {
+      try {
+        const response = await fetch("/api/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "REMOVE_LEAVE",
+            dateKey,
+            accessCode
+          })
+        });
+        const data = await response.json();
+        if (data.history) {
+          setHistory(data.history);
+        }
+      } catch (e) {}
+    }
+  }, [accessCode]);
+
+  const handleAutoFillSaturdays = useCallback(() => {
+    const now = new Date();
+    const offSaturdays = getOffSaturdaysForMonth(now.getFullYear(), now.getMonth());
+    setLeaves((prev) => {
+      const existingKeys = new Set(prev.map((l) => l.date));
+      const additions = offSaturdays.filter((s) => !existingKeys.has(s.date));
+      if (additions.length === 0) return prev;
+      return [...additions, ...prev].sort((a, b) => b.date.localeCompare(a.date));
+    });
+    setNotice(`⚡ Added ${offSaturdays.length} alternate off-Saturdays for this month!`);
+    triggerVibrate([100, 50, 100]);
+
+    if (accessCode) {
+      offSaturdays.forEach(async (s) => {
+        try {
+          await fetch("/api/attendance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "SET_LEAVE",
+              dateKey: s.date,
+              leaveType: s.label,
+              note: s.note,
+              accessCode
+            })
+          });
+        } catch (e) {}
+      });
+    }
+  }, [accessCode]);
+
   // Gamification: Streak & Weekly Performance Stats
   const streak = useMemo(() => {
-    return calculateStreak(history, summary.workSeconds, summary.breakSeconds);
-  }, [history, summary.workSeconds, summary.breakSeconds]);
+    return calculateStreak(history, summary.workSeconds, summary.breakSeconds, leaves);
+  }, [history, summary.workSeconds, summary.breakSeconds, leaves]);
 
   const weeklyStats = useMemo(() => {
     return calculateWeeklyStats(history, summary.workSeconds, summary.breakSeconds);
@@ -2372,12 +2831,14 @@ export default function App() {
     }
   }
 
-  const statusCopy = {
-    NOT_STARTED: ["Not started", "Start your day when you arrive."],
-    WORKING: ["Working", "Your work timer is running."],
-    ON_BREAK: ["On break", "Your break timer is running."],
-    COMPLETED: ["Day completed", "Today's attendance has been closed."]
-  }[summary.status];
+  const statusCopy = todayIsLeave && events.length === 0
+    ? ["On leave", todayIsLeave.label || "Approved scheduled day off."]
+    : {
+        NOT_STARTED: ["Not started", "Start your day when you arrive."],
+        WORKING: ["Working", "Your work timer is running."],
+        ON_BREAK: ["On break", "Your break timer is running."],
+        COMPLETED: ["Day completed", "Today's attendance has been closed."]
+      }[summary.status];
 
   // Helper for custom punch label
   const customTimeFormatted = isCustomTimeOpen && customTime ? formatClock(timeStringToIso(customTime)) : null;
@@ -2500,10 +2961,20 @@ export default function App() {
                 <small>{streak > 0 ? "8h completed · zero overages" : "Hit 8h + ≤1h break today to start"}</small>
               </span>
             </div>
+            <button
+              type="button"
+              className={`leave-header-pill ${todayIsLeave ? "active" : ""}`}
+              onClick={() => setIsLeaveModalOpen(true)}
+              title="Manage leave dates & scheduled days off"
+            >
+              <Palmtree size={13} />
+              <span>{todayIsLeave ? todayIsLeave.label : "Log Leave"}</span>
+              {leaves.length > 0 && <span className="leave-count-bubble">{leaves.length}</span>}
+            </button>
           </div>
         </div>
         <div className="status-pill">
-          <span className={`status-dot ${summary.status.toLowerCase()}`} />
+          <span className={`status-dot ${todayIsLeave && events.length === 0 ? "leave" : summary.status.toLowerCase()}`} />
           <span className="status-pill-text">{statusCopy[0]}</span>
         </div>
       </section>
@@ -2512,6 +2983,40 @@ export default function App() {
       {notice && !error && <div className="alert success"><CheckCircle2 size={18} /><span>{notice}</span></div>}
 
       <section className="hero-card">
+        {todayIsLeave && events.length === 0 && (
+          <div className="hero-leave-card">
+            <div className="hero-leave-content">
+              <span className="hero-leave-icon"><Palmtree size={22} /></span>
+              <div className="hero-leave-text">
+                <div className="hero-leave-eyebrow">
+                  <span className="hero-leave-tag">ON LEAVE TODAY</span>
+                  <span className="hero-leave-subtag">Protected Streak</span>
+                </div>
+                <h4>{todayIsLeave.label}</h4>
+                <p>
+                  {todayIsLeave.note ? `"${todayIsLeave.note}" — ` : ""}
+                  Scheduled rest day. No punch required today. Enjoy your time off!
+                </p>
+              </div>
+            </div>
+            <div className="hero-leave-actions">
+              <button
+                type="button"
+                className="btn-leave-manage"
+                onClick={() => setIsLeaveModalOpen(true)}
+              >
+                Manage leaves
+              </button>
+              <button
+                type="button"
+                className="btn-leave-remove"
+                onClick={() => handleRemoveLeave(todayKey())}
+              >
+                Remove & start work
+              </button>
+            </div>
+          </div>
+        )}
         <div className="hero-head">
           <div className="hero-head-left">
             <div className="work-label-row">
@@ -2969,6 +3474,9 @@ export default function App() {
         <div className="section-heading">
           <div><p className="eyebrow">TODAY'S ACTIVITY</p><h2>Punch history</h2></div>
           <div className="history-controls">
+            <button className="add-leave-btn" onClick={() => setIsLeaveModalOpen(true)} disabled={loading || busy}>
+              <Palmtree size={13} /> Log leave
+            </button>
             <button className="add-punch-btn" onClick={() => { setManualTimeInput(getLocalTimeString()); setIsAddModalOpen(true); }} disabled={loading || busy}>
               <Plus size={13} /> Add punch
             </button>
@@ -3097,11 +3605,22 @@ export default function App() {
         </div>
       )}
 
+      <LeaveModal
+        isOpen={isLeaveModalOpen}
+        onClose={() => setIsLeaveModalOpen(false)}
+        leaves={leaves}
+        onAddLeave={handleAddLeave}
+        onRemoveLeave={handleRemoveLeave}
+        onAutoFillSaturdays={handleAutoFillSaturdays}
+        busy={busy}
+      />
+
       <ShiftAnalyticsDashboard
         history={history}
         currentSeconds={summary.workSeconds}
         currentBreakSeconds={summary.breakSeconds}
         weeklyStats={weeklyStats}
+        leaves={leaves}
       />
 
       <footer>

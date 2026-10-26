@@ -34,8 +34,67 @@ function doPost(e) {
       const todayStr = dateKey_(now);
       const allEvents = readEvents_(ss);
       const events = allEvents.filter(row => isSameDay_(row.timestamp, todayStr));
-      const history = buildDailyHistory_(allEvents);
+      const history = buildDailyHistory_(allEvents, ss);
       return json_({ ok: true, events: events, history: history });
+    }
+
+    // Set a day as Leave / Day Off
+    if (action === "SET_LEAVE") {
+      const lock = LockService.getScriptLock();
+      lock.waitLock(10000);
+      try {
+        const dateKey = String(payload.dateKey || "");
+        if (!dateKey) return json_({ ok: false, error: "Missing dateKey." });
+        const leaveType = String(payload.leaveType || "LEAVE");
+        const note = String(payload.note || "");
+        const now = new Date();
+
+        upsertDailySummary_(ss, dateKey, [], {
+          status: "LEAVE",
+          workSeconds: 0,
+          breakSeconds: 0,
+          firstPunch: "",
+          lastPunch: note ? (leaveType + " (" + note + ")") : leaveType
+        }, now);
+
+        const allEvents = readEvents_(ss);
+        return json_({
+          ok: true,
+          message: "Leave recorded for " + dateKey,
+          history: buildDailyHistory_(allEvents, ss)
+        });
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    // Remove a Leave status
+    if (action === "REMOVE_LEAVE") {
+      const lock = LockService.getScriptLock();
+      lock.waitLock(10000);
+      try {
+        const dateKey = String(payload.dateKey || "");
+        if (!dateKey) return json_({ ok: false, error: "Missing dateKey." });
+        const sheet = ss.getSheetByName(DAILY_SHEET);
+        const lastRow = sheet.getLastRow();
+        if (lastRow >= 2) {
+          const dates = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+          for (let i = 0; i < dates.length; i++) {
+            if (dateKey_(dates[i][0]) === dateKey && String(dates[i][3]) === "LEAVE") {
+              sheet.deleteRow(i + 2);
+              break;
+            }
+          }
+        }
+        const allEvents = readEvents_(ss);
+        return json_({
+          ok: true,
+          message: "Leave removed for " + dateKey,
+          history: buildDailyHistory_(allEvents, ss)
+        });
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     // Edit an existing punch timestamp
@@ -348,14 +407,21 @@ function upsertDailySummary_(ss, dateKey, events, summary, now) {
   sheet.getRange(targetRow, 9, 1, 1).setNumberFormat("yyyy-mm-dd hh:mm:ss");
 }
 
-function buildDailyHistory_(events) {
+function buildDailyHistory_(events, ss) {
+  if (!ss) {
+    try {
+      ss = getSpreadsheet_();
+    } catch (e) {}
+  }
+
   const byDate = {};
   events.forEach(event => {
     const dKey = dateKey_(event.timestamp);
     if (!byDate[dKey]) byDate[dKey] = [];
     byDate[dKey].push(event);
   });
-  return Object.keys(byDate).sort().reverse().slice(0, 31).map(date => {
+
+  const result = Object.keys(byDate).map(date => {
     const rows = byDate[date];
     const summary = summarize_(rows, new Date(rows[rows.length - 1].timestamp).getTime());
     return {
@@ -367,6 +433,33 @@ function buildDailyHistory_(events) {
       lastPunch: summary.lastPunch
     };
   });
+
+  // Also include any LEAVE records from Daily Summary
+  if (ss) {
+    try {
+      const dailySheet = ss.getSheetByName(DAILY_SHEET);
+      const lastRow = dailySheet.getLastRow();
+      if (lastRow >= 2) {
+        const rows = dailySheet.getRange(2, 1, lastRow - 1, DAILY_HEADERS.length).getValues();
+        rows.forEach(r => {
+          const dKey = dateKey_(r[0]);
+          const status = String(r[3]);
+          if (status === "LEAVE" && !result.some(item => item.date === dKey)) {
+            result.push({
+              date: dKey,
+              status: "LEAVE",
+              workSeconds: 0,
+              breakSeconds: 0,
+              firstPunch: "",
+              lastPunch: String(r[2] || "")
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  return result.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 31);
 }
 
 function dateKey_(date) {
