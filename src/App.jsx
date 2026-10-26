@@ -1675,9 +1675,14 @@ function ShiftAnalyticsDashboard({ history = [], currentSeconds = 0, currentBrea
 
       const match = (history || []).find((h) => h.date === key);
       const leaveEntry = (leaves || []).find((l) => l.date === key);
-      const isLeave = Boolean(leaveEntry || (match && match.status === "LEAVE"));
-      const leaveLabel = leaveEntry ? leaveEntry.label : (match && match.lastPunch ? match.lastPunch : "Approved Leave");
-      const leaveNote = leaveEntry ? leaveEntry.note : "";
+      const isSunday = d.getDay() === 0;
+      const isLeave = Boolean(leaveEntry || isSunday || (match && match.status === "LEAVE"));
+      const leaveLabel = leaveEntry
+        ? leaveEntry.label
+        : isSunday
+        ? "Sunday Weekly Off"
+        : (match && match.lastPunch ? match.lastPunch : "Approved Leave");
+      const leaveNote = leaveEntry ? leaveEntry.note : isSunday ? "Weekly rest day" : "";
 
       let workSec = 0;
       let breakSec = 0;
@@ -2261,7 +2266,19 @@ export default function App() {
   }, [leaves]);
 
   const todayIsLeave = useMemo(() => {
-    return leaves.find((l) => l.date === todayKey());
+    const found = leaves.find((l) => l.date === todayKey());
+    if (found) return found;
+    // Auto-recognize Sunday as a weekly rest day without manual entry needed
+    const now = new Date();
+    if (now.getDay() === 0) {
+      return {
+        date: todayKey(),
+        type: "sunday",
+        label: "Sunday Weekly Off",
+        note: "Weekly rest day"
+      };
+    }
+    return null;
   }, [leaves]);
 
   const handleAddLeave = useCallback(async (dateKey, type, label, note) => {
@@ -2989,13 +3006,15 @@ export default function App() {
               <span className="hero-leave-icon"><Palmtree size={22} /></span>
               <div className="hero-leave-text">
                 <div className="hero-leave-eyebrow">
-                  <span className="hero-leave-tag">ON LEAVE TODAY</span>
+                  <span className="hero-leave-tag">{todayIsLeave.type === "sunday" ? "WEEKLY REST DAY" : "ON LEAVE TODAY"}</span>
                   <span className="hero-leave-subtag">Protected Streak</span>
                 </div>
                 <h4>{todayIsLeave.label}</h4>
                 <p>
                   {todayIsLeave.note ? `"${todayIsLeave.note}" — ` : ""}
-                  Scheduled rest day. No punch required today. Enjoy your time off!
+                  {todayIsLeave.type === "sunday"
+                    ? "Sunday is your weekly rest day. No punch required and your on-time streak is safe. Enjoy your weekend!"
+                    : "Scheduled rest day. No punch required today. Enjoy your time off!"}
                 </p>
               </div>
             </div>
@@ -3007,13 +3026,15 @@ export default function App() {
               >
                 Manage leaves
               </button>
-              <button
-                type="button"
-                className="btn-leave-remove"
-                onClick={() => handleRemoveLeave(todayKey())}
-              >
-                Remove & start work
-              </button>
+              {todayIsLeave.type !== "sunday" && (
+                <button
+                  type="button"
+                  className="btn-leave-remove"
+                  onClick={() => handleRemoveLeave(todayKey())}
+                >
+                  Remove & start work
+                </button>
+              )}
             </div>
           </div>
         )}
