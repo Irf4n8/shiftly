@@ -89,15 +89,7 @@ export function deriveNfcInOutActions(status, firstPunch, nowMs = Date.now()) {
  * @param {string|null} authorizedTagId
  * @returns {boolean}
  */
-export function getAuthorizedTagId() {
-  return (
-    import.meta.env.VITE_AUTHORIZED_TAG_ID ||
-    import.meta.env.vite_authorized_tag_id ||
-    ""
-  );
-}
-
-export function isTagAuthorized(scannedSerial, authorizedTagId = getAuthorizedTagId()) {
+export function isTagAuthorized(scannedSerial, authorizedTagId = import.meta.env.VITE_AUTHORIZED_TAG_ID) {
   if (!scannedSerial || !authorizedTagId) return false;
   const s = String(scannedSerial).trim().toLowerCase();
   const a = String(authorizedTagId).trim().toLowerCase();
@@ -300,7 +292,7 @@ export function useNfcPunch({
   const handleReading = useCallback(
     (event) => {
       const serialNumber = event?.serialNumber || "";
-      const authorizedTagId = getAuthorizedTagId();
+      const authorizedTagId = import.meta.env.VITE_AUTHORIZED_TAG_ID;
 
       console.log(
         "[Shiftly Web NFC] Scanned serialNumber:",
