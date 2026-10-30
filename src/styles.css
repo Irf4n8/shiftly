@@ -5799,3 +5799,223 @@ footer {
 }
 
 
+
+
+/* =========================================================================
+   NFC Tap-to-Punch Affordance & Cancelable Toast (Neo-Brutalist)
+   ========================================================================= */
+.alert.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+[data-theme="dark"] .alert.warning {
+  background: #2a2010;
+  border-color: #FFC15A;
+  color: #FFE194;
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.action-button.action-nfc {
+  background: #06b6d4;
+  color: #000000;
+}
+
+.action-button.action-nfc .action-icon {
+  background: #000000;
+  color: #67e8f9;
+  border: var(--border-width) solid #000000;
+}
+
+[data-theme="light"] .action-button.action-nfc .action-icon {
+  background: #000000;
+  color: #67e8f9;
+}
+
+.action-button.action-nfc.nfc-scanning {
+  background: #22d3ee;
+}
+
+.action-nfc-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 2px solid #000000;
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 2px 2px 0px #000000;
+  flex-shrink: 0;
+}
+
+.action-button.action-nfc.nfc-scanning .action-nfc-status {
+  background: #4ade80;
+  color: #000000;
+}
+
+.nfc-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #000000;
+  animation: nfcPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes nfcPulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; }
+}
+
+[data-theme="dark"] .action-button.action-nfc {
+  background: #0891b2;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .action-button.action-nfc.nfc-scanning {
+  background: #06b6d4;
+  color: #000000;
+}
+
+[data-theme="dark"] .action-button.action-nfc .action-icon {
+  background: #121212;
+  color: #67e8f9;
+  border-color: #080808;
+}
+
+[data-theme="dark"] .action-button.action-nfc .action-nfc-status {
+  background: #121212;
+  color: #F5F1E8;
+  border-color: #080808;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+[data-theme="dark"] .action-button.action-nfc.nfc-scanning .action-nfc-status {
+  background: #22c55e;
+  color: #121212;
+}
+
+/* 3-Second Cancelable NFC Toast */
+.nfc-cancel-toast-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  pointer-events: auto;
+  max-width: 92vw;
+  width: 440px;
+  animation: slideDownNfcToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDownNfcToast {
+  from { opacity: 0; transform: translate(-50%, -24px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.nfc-cancel-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #FFE600;
+  color: #000000;
+  border: 3px solid #000000;
+  border-radius: 12px;
+  padding: 12px 18px;
+  box-shadow: 5px 5px 0px #000000;
+}
+
+[data-theme="dark"] .nfc-cancel-toast {
+  background: #FFE600;
+  color: #000000;
+  border-color: #000000;
+}
+
+.nfc-cancel-toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.nfc-cancel-toast-content strong {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #000000;
+}
+
+.nfc-cancel-toast-content span {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
+
+.nfc-cancel-btn {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  font-family: var(--font-mono) !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+  transition: transform .1s ease, box-shadow .1s ease !important;
+  flex-shrink: 0;
+}
+
+.nfc-cancel-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000 !important;
+}
+
+.nfc-cancel-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
+.nfc-buffer-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.nfc-in-btn {
+  background: #22c55e !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  font-family: var(--font-mono) !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+  transition: transform .1s ease, box-shadow .1s ease !important;
+  flex-shrink: 0;
+}
+
+.nfc-in-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000 !important;
+}
+
+.nfc-in-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
+.nfc-in-text-btn {
+  background: #22c55e !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}

@@ -4,8 +4,10 @@ import {
   CheckCircle2, CircleAlert, RefreshCw, Timer, Utensils, Wifi, WifiOff,
   Edit2, Trash2, Plus, X, Clock, Zap, Sun, Moon, Sparkles,
   BarChart3, Scale, AlertTriangle, ShieldCheck, Compass, Info,
-  Bell, BellRing, Smartphone, Check, RotateCcw, Palmtree, CalendarCheck
+  Bell, BellRing, Smartphone, Check, RotateCcw, Palmtree, CalendarCheck,
+  Nfc
 } from "lucide-react";
+import useNfcPunch, { deriveNfcPunchAction } from "./hooks/useNfcPunch.js";
 
 const TARGET_SECONDS = 8 * 60 * 60;
 const BREAK_ALLOWANCE_SECONDS = 60 * 60;
@@ -2714,6 +2716,27 @@ export default function App() {
     }
   }
 
+  const {
+    isSupported: isNfcSupported,
+    isScanning: isNfcScanning,
+    toggleScan: toggleNfcScan,
+    pendingPunch: nfcPendingPunch,
+    cancelPendingPunch: cancelNfcPendingPunch,
+    confirmPunchIn: confirmNfcPunchIn,
+    confirmPunchOut: confirmNfcPunchOut
+  } = useNfcPunch({
+    status: summary.status,
+    firstPunch: summary.firstPunch,
+    punch,
+    setNotice,
+    setError,
+    busy: busy || loading
+  });
+
+  const nextNfcAction = useMemo(() => {
+    return deriveNfcPunchAction(summary.status, summary.firstPunch, now);
+  }, [summary.status, summary.firstPunch, now]);
+
   function openEditModal(event) {
     setEditingEvent(event);
     setEditTimeInput(getLocalTimeString(new Date(event.timestamp)));
@@ -2996,6 +3019,53 @@ export default function App() {
         </div>
       </section>
 
+      {nfcPendingPunch && (
+        <div className="nfc-cancel-toast-container">
+          <div className="nfc-cancel-toast buffer-active">
+            <span className="confetti-trophy">⏱️</span>
+            <div className="nfc-cancel-toast-content">
+              <strong>Punching OUT in {nfcPendingPunch.secondsLeft}s...</strong>
+              <span>
+                Auto-submits {ACTION_LABELS[nfcPendingPunch.outAction] || nfcPendingPunch.outAction} after 10s. Tap Punch IN or tap card again before 10s for {ACTION_LABELS[nfcPendingPunch.inAction] || nfcPendingPunch.inAction}.
+              </span>
+            </div>
+            <div className="nfc-buffer-btn-group">
+              <button
+                type="button"
+                className="nfc-in-btn"
+                onClick={confirmNfcPunchIn}
+                title="Punch IN now"
+              >
+                Punch IN
+              </button>
+              <button
+                type="button"
+                className="nfc-cancel-btn"
+                onClick={cancelNfcPendingPunch}
+                title="Cancel punch"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {nfcPendingPunch && (
+        <div className="alert warning nfc-buffer-alert">
+          <Clock size={18} />
+          <span>
+            Punching OUT in <strong>{nfcPendingPunch.secondsLeft}s</strong> ({ACTION_LABELS[nfcPendingPunch.outAction] || nfcPendingPunch.outAction}). Tap card again or select Punch IN before 10s.
+          </span>
+          <div className="nfc-buffer-btn-group" style={{ marginLeft: "auto" }}>
+            <button type="button" className="text-button nfc-in-text-btn" onClick={confirmNfcPunchIn}>
+              Punch IN
+            </button>
+            <button type="button" className="text-button" onClick={cancelNfcPendingPunch}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {error && <div className="alert error"><CircleAlert size={18} /><span>{error}</span><button className="text-button" onClick={() => refresh()}>Retry</button></div>}
       {notice && !error && <div className="alert success"><CheckCircle2 size={18} /><span>{notice}</span></div>}
 
@@ -3396,6 +3466,36 @@ export default function App() {
         </div>
 
         <div className="action-grid">
+          {isNfcSupported && (
+            <button
+              type="button"
+              className={`action-button action-nfc ${isNfcScanning ? "nfc-scanning" : ""}`}
+              disabled={busy || loading}
+              onClick={toggleNfcScan}
+            >
+              <span className="action-icon">
+                <Nfc size={21} />
+              </span>
+              <span className="action-text">
+                <strong>{isNfcScanning ? "Tap to Punch (NFC Active)" : "Tap to Punch (NFC)"}</strong>
+                <small>
+                  {isNfcScanning
+                    ? `Hold authorized tag to phone · ${ACTION_LABELS[nextNfcAction] || nextNfcAction}`
+                    : "Tap to activate NFC contactless punch"}
+                </small>
+              </span>
+              <span className="action-nfc-status">
+                {isNfcScanning ? (
+                  <>
+                    <span className="nfc-live-dot" /> READY
+                  </>
+                ) : (
+                  "ACTIVATE"
+                )}
+              </span>
+            </button>
+          )}
+
           {summary.status === "NOT_STARTED" && (
             <button className="action-button action-start-work" disabled={busy || loading} onClick={() => punch("START_WORK", isCustomTimeOpen && customTime ? timeStringToIso(customTime) : null)}>
               <span className="action-icon"><ArrowDownToLine size={21} /></span>
